@@ -1,0 +1,22 @@
+{
+  "name": "aqkn",
+  "version": "1.0.0",
+  "main": "dist/how-long-till-lunch.cjs.js",
+  "module": "dist/how-long-till-lunch.esm.js",
+  "browser": "dist/how-long-till-lunch.umd.js",
+  "repository": "git@github.com:airtoxin/aqkn.git",
+  "author": "airtoxin <airtoxin@icloud.com>",
+  "license": "MIT",
+  "scripts": {
+    "build": "rollup -c",
+    "dev": "rollup -c -w"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^19.0.0",
+    "@rollup/plugin-node-resolve": "^13.0.0",
+    "rollup": "^2.50.5"
+  },
+  "files": [
+    "dist"
+  ]
+}
