@@ -1,3 +1,1 @@
-export const sampleFunction = () => {
-  console.log("sample!");
-};
+export { aqkn } from "./Aqkn";
