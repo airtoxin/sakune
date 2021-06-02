@@ -1,13 +1,14 @@
 import resolve from "@rollup/plugin-node-resolve";
 import commonjs from "@rollup/plugin-commonjs";
 import typescript from "@rollup/plugin-typescript";
+import dts from "rollup-plugin-dts";
 import pkg from "./package.json";
 
 export default [
   {
     input: "src/main.ts",
     output: {
-      name: "howLongUntilLunch",
+      name: "aqkn",
       file: pkg.browser,
       format: "umd",
     },
@@ -26,13 +27,17 @@ export default [
   // `file` and `format` for each target)
   {
     input: "src/main.ts",
-    external: ["ms"],
+    external: [
+      // "ms"
+    ],
     plugins: [
       typescript(), // so Rollup can convert TypeScript to JavaScript
+      dts(),
     ],
     output: [
       { file: pkg.main, format: "cjs" },
       { file: pkg.module, format: "es" },
+      { file: pkg.types, format: "es" }
     ],
   },
 ];

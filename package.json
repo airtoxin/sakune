@@ -1,9 +1,10 @@
 {
   "name": "aqkn",
   "version": "1.0.0",
-  "main": "dist/how-long-till-lunch.cjs.js",
-  "module": "dist/how-long-till-lunch.esm.js",
-  "browser": "dist/how-long-till-lunch.umd.js",
+  "main": "dist/aqkn.cjs.js",
+  "module": "dist/aqkn.esm.js",
+  "browser": "dist/aqkn.umd.js",
+  "types": "dist/aqkn.d.ts",
   "repository": "git@github.com:airtoxin/aqkn.git",
   "author": "airtoxin <airtoxin@icloud.com>",
   "license": "MIT",
@@ -18,6 +19,7 @@
     "@rollup/plugin-typescript": "^8.2.1",
     "prettier": "^2.3.0",
     "rollup": "^2.50.5",
+    "rollup-plugin-dts": "^3.0.2",
     "tslib": "^2.2.0",
     "typescript": "^4.3.2"
   },
