@@ -8,7 +8,7 @@ export class Aqkn {
   render(mountElement: Element): void {
     const svgStyle = styleMap({
       width: `${this.size.x}px`,
-      height: `${this.size.y}px`
+      height: `${this.size.y}px`,
     });
 
     render(html`<svg style=${svgStyle}></svg>`, mountElement);
