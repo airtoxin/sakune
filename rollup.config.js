@@ -27,9 +27,6 @@ export default [
   // `file` and `format` for each target)
   {
     input: "src/main.ts",
-    external: [
-      // "ms"
-    ],
     plugins: [
       typescript(), // so Rollup can convert TypeScript to JavaScript
       dts(),

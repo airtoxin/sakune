@@ -1,1 +1,1 @@
-export { aqkn } from "./Aqkn";
+export { Aqkn } from "./Aqkn";

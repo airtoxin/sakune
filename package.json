@@ -27,5 +27,8 @@
   },
   "files": [
     "dist"
-  ]
+  ],
+  "dependencies": {
+    "lit-html": "^1.4.1"
+  }
 }

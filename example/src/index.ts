@@ -1,3 +1,4 @@
-import { aqkn } from "../../src/main";
+import { Aqkn } from "../../src/main";
+import { Vector } from "../../src/Vector";
 
-aqkn.render(document.body);
+new Aqkn(new Vector(400, 400)).render(document.body);
