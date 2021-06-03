@@ -12,14 +12,16 @@
     "build": "rollup -c",
     "dev": "rollup -c -w",
     "format": "prettier --ignore-path .gitignore --write .",
-    "postinstall": "yarn --cwd example",
-    "example": "yarn --cwd example dev"
+    "example": "parcel serve ./src/index.html"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^19.0.0",
     "@rollup/plugin-node-resolve": "^13.0.0",
     "@rollup/plugin-typescript": "^8.2.1",
+    "@types/react-dom": "^17.0.6",
+    "parcel": "^2.0.0-beta.3.1",
     "prettier": "^2.3.0",
+    "react-dom": "^17.0.2",
     "rollup": "^2.50.5",
     "rollup-plugin-dts": "^3.0.2",
     "tslib": "^2.2.0",
@@ -29,6 +31,7 @@
     "dist"
   ],
   "dependencies": {
-    "lit-html": "^1.4.1"
+    "@types/react": "^17.0.9",
+    "react": "^17.0.2"
   }
 }
