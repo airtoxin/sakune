@@ -31,7 +31,12 @@
     "dist"
   ],
   "dependencies": {
+    "@types/d3": "^6.7.0",
+    "@types/d3-drag": "^2.0.0",
     "@types/react": "^17.0.9",
-    "react": "^17.0.2"
+    "d3": "^6.7.0",
+    "d3-drag": "^2.0.0",
+    "react": "^17.0.2",
+    "short-uuid": "^4.2.0"
   }
 }

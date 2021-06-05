@@ -37,11 +37,7 @@ export default [
   },
   {
     input: "src/main.ts",
-    plugins: [
-      dts(),
-    ],
-    output: [
-      { file: pkg.types, format: "es" }
-    ],
+    plugins: [dts()],
+    output: [{ file: pkg.types, format: "es" }],
   },
 ];
