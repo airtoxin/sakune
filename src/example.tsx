@@ -9,7 +9,7 @@ const pieces = createPieces(
     [
       "BigSquare-Black",
       {
-        num: 2,
+        num: 8,
         color: "black",
         shape: {
           type: "rect",
@@ -26,6 +26,7 @@ const pieces = createPieces(
     //     shape: {
     //       type: "rect",
     //       size: new Vector(80, 80),
+    //       height: 10,
     //     },
     //   },
     // ],
@@ -37,6 +38,7 @@ const pieces = createPieces(
     //     shape: {
     //       type: "rect",
     //       size: new Vector(80, 40),
+    //       height: 10,
     //     },
     //   },
     // ],
@@ -48,6 +50,7 @@ const pieces = createPieces(
     //     shape: {
     //       type: "rect",
     //       size: new Vector(80, 40),
+    //       height: 10,
     //     },
     //   },
     // ],
@@ -59,6 +62,7 @@ const pieces = createPieces(
     //     shape: {
     //       type: "rect",
     //       size: new Vector(40, 40),
+    //       height: 10,
     //     },
     //   },
     // ],
@@ -70,6 +74,7 @@ const pieces = createPieces(
     //     shape: {
     //       type: "rect",
     //       size: new Vector(40, 40),
+    //       height: 10,
     //     },
     //   },
     // ],
@@ -79,7 +84,7 @@ const pieces = createPieces(
 render(
   <Aqkn
     option={{
-      size: new Vector(500, 500),
+      size: new Vector(1000, 1000),
       pieces,
     }}
   />,

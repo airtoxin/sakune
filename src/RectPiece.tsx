@@ -4,19 +4,26 @@ import { Vector } from "./Vector";
 
 type Props<TPieceName extends string> = {
   piece: AqknPiece<TPieceName>;
-  onInteract: () => void;
+  position: Vector;
+  onInteractStart: () => void;
+  onMove: (posision: Vector) => void;
 };
 type RectPieceComponent = <TPieceName extends string>(
   props: Props<TPieceName>
 ) => React.ReactElement<Props<TPieceName>>;
 
-export const RectPiece: RectPieceComponent = ({ piece, onInteract }) => {
+export const RectPiece: RectPieceComponent = ({
+  piece,
+  position,
+  onInteractStart,
+  onMove,
+}) => {
   const [draggingPositionDiff, setDraggingPositionDiff] =
     useState<Vector | null>(null);
   const handleDrag = useCallback(
     (event: MouseEvent) => {
       if (draggingPositionDiff) {
-        setPosition(
+        onMove(
           new Vector(
             event.clientX - draggingPositionDiff.x,
             event.clientY - draggingPositionDiff.y
@@ -26,7 +33,6 @@ export const RectPiece: RectPieceComponent = ({ piece, onInteract }) => {
     },
     [draggingPositionDiff]
   );
-  const [position, setPosition] = useState(new Vector(100, 100));
 
   return (
     <g
@@ -40,13 +46,14 @@ export const RectPiece: RectPieceComponent = ({ piece, onInteract }) => {
         }px ${piece.shape.height / 2}px)`,
       }}
       onMouseDown={(event) => {
-        onInteract();
+        onInteractStart();
         setDraggingPositionDiff(
           new Vector(event.clientX - position.x, event.clientY - position.y)
         );
       }}
-      onMouseUp={() => setDraggingPositionDiff(null)}
       onMouseMove={handleDrag}
+      onMouseUp={() => setDraggingPositionDiff(null)}
+      onMouseLeave={() => setDraggingPositionDiff(null)}
     >
       <rect
         width={piece.shape.size.x}

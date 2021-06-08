@@ -1,7 +1,8 @@
 import { unreachableCode } from "./utils";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useReducer, useState } from "react";
 import { AqknOption, AqknPiece } from "./core";
 import { RectPiece } from "./RectPiece";
+import { Vector } from "./Vector";
 
 type Props<TPieceName extends string> = {
   option: AqknOption<TPieceName>;
@@ -9,6 +10,15 @@ type Props<TPieceName extends string> = {
 type AqknComponent = <TPieceName extends string>(
   props: Props<TPieceName>
 ) => React.ReactElement<Props<TPieceName>>;
+
+type PiecePositions = {
+  [id: string]: Vector;
+};
+type PiecePositionAction = {
+  type: "SET_POSITION";
+  id: string;
+  position: Vector;
+};
 
 export const Aqkn: AqknComponent = ({ option }) => {
   const [pieces, setPieces] = useState(option.pieces);
@@ -19,6 +29,21 @@ export const Aqkn: AqknComponent = ({ option }) => {
       );
     },
     [pieces]
+  );
+  const [positions, dispatch] = useReducer(
+    (state: PiecePositions, action: PiecePositionAction): PiecePositions => {
+      return { ...state, [action.id]: action.position };
+    },
+    pieces.reduce(
+      (acc, piece, i) => ({
+        ...acc,
+        [piece.id]: new Vector(
+          100 + piece.shape.height * (pieces.length - i),
+          100 + piece.shape.height * (pieces.length - i)
+        ),
+      }),
+      {}
+    )
   );
 
   const pieceChildren = pieces.map((piece, i) => {
@@ -45,7 +70,11 @@ export const Aqkn: AqknComponent = ({ option }) => {
           <RectPiece
             key={piece.id}
             piece={piece}
-            onInteract={() => updateOrder(piece)}
+            position={positions[piece.id]!}
+            onInteractStart={() => updateOrder(piece)}
+            onMove={(position) =>
+              dispatch({ type: "SET_POSITION", id: piece.id, position })
+            }
           />
         );
       }
