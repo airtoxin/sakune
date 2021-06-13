@@ -14,11 +14,9 @@ type AqknComponent = <TPieceName extends string>(
 type PiecePositions = {
   [id: string]: Vector;
 };
-type PiecePositionAction = {
-  type: "SET_POSITION";
-  id: string;
-  position: Vector;
-};
+type PiecePositionAction =
+  | { type: "SET_POSITION"; id: string; position: Vector }
+  | { type: "SNAP"; snappingPieceId: string; snapToPieceId: string };
 
 export const Aqkn: AqknComponent = ({ option }) => {
   const [pieces, setPieces] = useState(option.pieces);
@@ -32,7 +30,16 @@ export const Aqkn: AqknComponent = ({ option }) => {
   );
   const [positions, dispatch] = useReducer(
     (state: PiecePositions, action: PiecePositionAction): PiecePositions => {
-      return { ...state, [action.id]: action.position };
+      if (action.type === "SET_POSITION") {
+        return { ...state, [action.id]: action.position };
+      } else if (action.type === "SNAP") {
+        return {
+          ...state,
+          [action.snappingPieceId]: state[action.snapToPieceId]!,
+        };
+      } else {
+        return unreachableCode(action);
+      }
     },
     pieces.reduce(
       (acc, piece, i) => ({
@@ -72,9 +79,22 @@ export const Aqkn: AqknComponent = ({ option }) => {
             piece={piece}
             position={positions[piece.id]!}
             onInteractStart={() => updateOrder(piece)}
-            onMove={(position) =>
-              dispatch({ type: "SET_POSITION", id: piece.id, position })
-            }
+            onMove={(position) => {
+              const snapTarget = Object.keys(positions)
+                .filter((id) => id !== piece.id)
+                .find((id) => {
+                  return positions[id]!.distance(position) < piece.shape.height;
+                });
+              if (snapTarget != null) {
+                dispatch({
+                  type: "SNAP",
+                  snappingPieceId: piece.id,
+                  snapToPieceId: snapTarget,
+                });
+              } else {
+                dispatch({ type: "SET_POSITION", id: piece.id, position });
+              }
+            }}
           />
         );
       }
