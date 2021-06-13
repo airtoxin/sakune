@@ -27,10 +27,13 @@ export const createCanvas = (mountingElement: Element): void => {
     if (type === "down") {
       draggingOrigin = mousePosition;
     } else if (type === "move") {
-      if (draggingOrigin == null) return;
       if (checkBoxHit(mousePosition, imageOrigin, imageSize)) {
+        canvas.style.cursor = "pointer";
+        if (draggingOrigin == null) return;
         imageOrigin = imageOrigin.add(mousePosition.sub(draggingOrigin));
         draggingOrigin = mousePosition;
+      } else {
+        canvas.style.cursor = "";
       }
     } else if (type === "up") {
       draggingOrigin = null;
