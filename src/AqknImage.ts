@@ -82,20 +82,52 @@ export class AqknImage {
     }
   }
 
-  private handleEvent(type: "down" | "move" | "up", mousePosition: Vector) {
-    if (type === "down") {
+  private handleEvent(
+    eventType: "down" | "move" | "up",
+    mousePosition: Vector
+  ) {
+    if (eventType === "down") {
       this.draggingOrigin = mousePosition;
-    } else if (type === "move") {
+    } else if (eventType === "move") {
       // バウンディングボックスの制御ポイントの衝突判定
       for (const [
-        name,
+        controlType,
         position,
       ] of this.getBoundingBoxControlPositions().entries()) {
         if (checkBoxHit(mousePosition, position, CONTROL_SIZE)) {
-          this.canvas.style.cursor = BOUNDING_BOX_CONTROL_CURSOR.get(name)!;
+          this.canvas.style.cursor =
+            BOUNDING_BOX_CONTROL_CURSOR.get(controlType)!;
+
+          // ドラッグ処理
+          if (this.draggingOrigin == null) return;
+          // ドラッグ開始位置が衝突判定外だったら移動しない
+          if (!checkBoxHit(this.draggingOrigin, position, CONTROL_SIZE)) return;
+          const diffX = Vector.createX(
+            mousePosition.sub(this.draggingOrigin).x
+          );
+          const diffY = Vector.createY(
+            mousePosition.sub(this.draggingOrigin).y
+          );
+          this.draggingOrigin = mousePosition;
+          if (["left-top", "top", "right-top"].includes(controlType)) {
+            this.imageOrigin = this.imageOrigin.add(diffY);
+            this.imageSize = this.imageSize.sub(diffY);
+          }
+          if (["left-bottom", "bottom", "right-bottom"].includes(controlType)) {
+            this.imageSize = this.imageSize.add(diffY);
+          }
+          if (["left-top", "left", "left-bottom"].includes(controlType)) {
+            this.imageOrigin = this.imageOrigin.add(diffX);
+            this.imageSize = this.imageSize.sub(diffX);
+          }
+          if (["right-top", "right", "right-bottom"].includes(controlType)) {
+            this.imageSize = this.imageSize.add(diffX);
+          }
+
           return;
         }
       }
+
       // 画像の衝突判定
       if (checkBoxHit(mousePosition, this.imageOrigin, this.imageSize)) {
         this.canvas.style.cursor = "pointer";
@@ -113,10 +145,10 @@ export class AqknImage {
       } else {
         this.canvas.style.cursor = "auto";
       }
-    } else if (type === "up") {
+    } else if (eventType === "up") {
       this.draggingOrigin = null;
     } else {
-      unreachableCode(type);
+      unreachableCode(eventType);
     }
   }
 
