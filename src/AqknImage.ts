@@ -18,10 +18,9 @@ const BOUNDING_BOX_CONTROL_POSITION = [
 ] as const;
 
 const BOUNDING_BOX_CONTROL_CURSOR = new Map<
-  BOUNDING_BOX_CONTROL_POSITION | "image",
+  BOUNDING_BOX_CONTROL_POSITION,
   string
 >([
-  ["image", "pointer"],
   ["top", "n-resize"],
   ["left", "w-resize"],
   ["right", "e-resize"],
@@ -43,11 +42,7 @@ export class AqknImage {
   private readonly img = new Image();
   private imageOrigin: Vector;
   private imageSize: Vector;
-
-  private draggingOrigin: {
-    type: "image" | BOUNDING_BOX_CONTROL_POSITION;
-    vec: Vector;
-  } | null = null;
+  private draggingOrigin: Vector | null = null;
 
   constructor(
     readonly canvas: HTMLCanvasElement,
@@ -89,30 +84,32 @@ export class AqknImage {
 
   private handleEvent(type: "down" | "move" | "up", mousePosition: Vector) {
     if (type === "down") {
+      this.draggingOrigin = mousePosition;
+    } else if (type === "move") {
       // バウンディングボックスの制御ポイントの衝突判定
       for (const [
-        type,
+        name,
         position,
       ] of this.getBoundingBoxControlPositions().entries()) {
         if (checkBoxHit(mousePosition, position, CONTROL_SIZE)) {
-          this.draggingOrigin = {
-            type,
-            vec: mousePosition,
-          };
+          this.canvas.style.cursor = BOUNDING_BOX_CONTROL_CURSOR.get(name)!;
+          return;
         }
       }
-    } else if (type === "move") {
-      if (this.draggingOrigin) {
-        // カーソル処理
-        this.canvas.style.cursor =
-          BOUNDING_BOX_CONTROL_CURSOR.get(this.draggingOrigin.type) ?? "auto";
+      // 画像の衝突判定
+      if (checkBoxHit(mousePosition, this.imageOrigin, this.imageSize)) {
+        this.canvas.style.cursor = "pointer";
+        if (this.draggingOrigin == null) return;
+
+        // ドラッグ開始位置が衝突判定外だったら移動しない
+        if (!checkBoxHit(this.draggingOrigin, this.imageOrigin, this.imageSize))
+          return;
+
         // ドラッグ処理
-        if (this.draggingOrigin.type === "image") {
-          this.imageOrigin = this.imageOrigin.add(
-            mousePosition.sub(this.draggingOrigin.vec)
-          );
-          this.draggingOrigin.vec = mousePosition;
-        }
+        this.imageOrigin = this.imageOrigin.add(
+          mousePosition.sub(this.draggingOrigin)
+        );
+        this.draggingOrigin = mousePosition;
       } else {
         this.canvas.style.cursor = "auto";
       }
