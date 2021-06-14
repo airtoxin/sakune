@@ -86,7 +86,7 @@ export class AqknImage {
     if (type === "down") {
       this.draggingOrigin = mousePosition;
     } else if (type === "move") {
-      // First, bounding box control box hit
+      // バウンディングボックスの制御ポイントの衝突判定
       for (const [
         name,
         position,
@@ -96,10 +96,16 @@ export class AqknImage {
           return;
         }
       }
-      // Next, image box hit
+      // 画像の衝突判定
       if (checkBoxHit(mousePosition, this.imageOrigin, this.imageSize)) {
         this.canvas.style.cursor = "pointer";
         if (this.draggingOrigin == null) return;
+
+        // ドラッグ開始位置が衝突判定外だったら移動しない
+        if (!checkBoxHit(this.draggingOrigin, this.imageOrigin, this.imageSize))
+          return;
+
+        // ドラッグ処理
         this.imageOrigin = this.imageOrigin.add(
           mousePosition.sub(this.draggingOrigin)
         );
