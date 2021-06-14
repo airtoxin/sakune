@@ -1,5 +1,5 @@
 import React from "react";
-import { createCanvas } from "./aqkn/canvas";
+import { createCanvas } from "./canvas";
 
 // const pieces = createPieces(
 //   new Map([

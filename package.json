@@ -9,10 +9,9 @@
   "author": "airtoxin <airtoxin@icloud.com>",
   "license": "MIT",
   "scripts": {
-    "build": "rollup -c",
-    "dev": "rollup -c -w",
-    "format": "prettier --ignore-path .gitignore --write .",
-    "example": "parcel serve ./src/index.html"
+    "build": "parcel build ./src/index.html",
+    "dev": "parcel serve ./src/index.html",
+    "format": "prettier --ignore-path .gitignore --write ."
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^19.0.0",
