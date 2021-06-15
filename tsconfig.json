@@ -10,7 +10,8 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "noUncheckedIndexedAccess": true,
-    "downlevelIteration": true
+    "downlevelIteration": true,
+    "noEmit": true
   },
   "include": ["src"]
 }
