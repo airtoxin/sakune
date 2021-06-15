@@ -1,5 +1,5 @@
 import { Vector } from "./Vector";
-import { checkBoxHit, unreachableCode } from "./utils";
+import { checkBoxHit } from "./utils";
 
 const CONTROL_SIZE = new Vector(10, 10);
 const HALF_CONTROL_SIZE = CONTROL_SIZE.div(2);
@@ -43,9 +43,12 @@ export class AqknImage {
   private imageOrigin: Vector;
   private imageSize: Vector;
   private draggingOrigin: Vector | null = null;
-  private dragType: "image" | BOUNDING_BOX_CONTROL_POSITION | null = null;
+  // 今カーソルがぶつかっているもの
+  private hitType: "image" | BOUNDING_BOX_CONTROL_POSITION | null = null;
+  // ドラッグ処理の対象
+  private draggingType: "image" | BOUNDING_BOX_CONTROL_POSITION | null = null;
 
-  constructor(
+  public constructor(
     readonly canvas: HTMLCanvasElement,
     readonly ctx: CanvasRenderingContext2D,
     readonly option: AqknImageConstructorOption
@@ -62,17 +65,17 @@ export class AqknImage {
     }
 
     canvas.addEventListener("mousedown", (event) => {
-      this.handleEvent("down", new Vector(event.offsetX, event.offsetY));
+      this.handleMouseDown(new Vector(event.offsetX, event.offsetY));
     });
     canvas.addEventListener("mousemove", (event) => {
-      this.handleEvent("move", new Vector(event.offsetX, event.offsetY));
+      this.handleMouseMove(new Vector(event.offsetX, event.offsetY));
     });
     canvas.addEventListener("mouseup", (event) => {
-      this.handleEvent("up", new Vector(event.offsetX, event.offsetY));
+      this.handleMouseUp(new Vector(event.offsetX, event.offsetY));
     });
   }
 
-  render() {
+  public render() {
     this.ctx.drawImage(
       this.img,
       ...this.imageOrigin.destruct(),
@@ -83,107 +86,74 @@ export class AqknImage {
     }
   }
 
-  private handleEvent(
-    eventType: "down" | "move" | "up",
-    mousePosition: Vector
-  ) {
-    if (eventType === "down") {
-      this.draggingOrigin = mousePosition;
-      // 制御ポイントの衝突判定のが優先なので後にチェックする
-      if (checkBoxHit(mousePosition, this.imageOrigin, this.imageSize)) {
-        this.dragType = "image";
-      }
-      for (const [
-        controlType,
-        position,
-      ] of this.getBoundingBoxControlPositions().entries()) {
-        if (checkBoxHit(mousePosition, position, CONTROL_SIZE)) {
-          this.dragType = controlType;
-          break;
-        }
-      }
-    } else if (eventType === "move") {
-      if (this.draggingOrigin == null) return;
-      if (this.dragType == null) return;
+  private handleMouseDown(mousePosition: Vector) {
+    this.draggingOrigin = mousePosition;
+    this.draggingType = this.hitType;
+  }
+
+  private handleDrag(mousePosition: Vector) {
+    if (this.draggingOrigin == null || this.draggingType == null) return;
+
+    if (this.draggingType === "image") {
+      this.imageOrigin = this.imageOrigin.add(
+        mousePosition.sub(this.draggingOrigin)
+      );
+    } else {
       const diffX = Vector.createX(mousePosition.sub(this.draggingOrigin).x);
       const diffY = Vector.createY(mousePosition.sub(this.draggingOrigin).y);
-      if (["left-top", "top", "right-top"].includes(this.dragType)) {
+      this.draggingOrigin = mousePosition;
+      if (["left-top", "top", "right-top"].includes(this.draggingType)) {
         this.imageOrigin = this.imageOrigin.add(diffY);
         this.imageSize = this.imageSize.sub(diffY);
       }
-      if (["left-bottom", "bottom", "right-bottom"].includes(this.dragType)) {
+      if (
+        ["left-bottom", "bottom", "right-bottom"].includes(this.draggingType)
+      ) {
         this.imageSize = this.imageSize.add(diffY);
       }
-      if (["left-top", "left", "left-bottom"].includes(this.dragType)) {
+      if (["left-top", "left", "left-bottom"].includes(this.draggingType)) {
         this.imageOrigin = this.imageOrigin.add(diffX);
         this.imageSize = this.imageSize.sub(diffX);
       }
-      if (["right-top", "right", "right-bottom"].includes(this.dragType)) {
+      if (["right-top", "right", "right-bottom"].includes(this.draggingType)) {
         this.imageSize = this.imageSize.add(diffX);
       }
-      this.draggingOrigin = mousePosition;
-
-      // // バウンディングボックスの制御ポイントの衝突判定
-      // for (const [
-      //   controlType,
-      //   position,
-      // ] of this.getBoundingBoxControlPositions().entries()) {
-      //   if (checkBoxHit(mousePosition, position, CONTROL_SIZE)) {
-      //     this.canvas.style.cursor =
-      //       BOUNDING_BOX_CONTROL_CURSOR.get(controlType)!;
-      //
-      //     // ドラッグ処理
-      //     if (this.draggingOrigin == null) return;
-      //     // ドラッグ開始位置が衝突判定外だったら移動しない
-      //     if (!checkBoxHit(this.draggingOrigin, position, CONTROL_SIZE)) return;
-      //     const diffX = Vector.createX(
-      //       mousePosition.sub(this.draggingOrigin).x
-      //     );
-      //     const diffY = Vector.createY(
-      //       mousePosition.sub(this.draggingOrigin).y
-      //     );
-      //     this.draggingOrigin = mousePosition;
-      //     if (["left-top", "top", "right-top"].includes(controlType)) {
-      //       this.imageOrigin = this.imageOrigin.add(diffY);
-      //       this.imageSize = this.imageSize.sub(diffY);
-      //     }
-      //     if (["left-bottom", "bottom", "right-bottom"].includes(controlType)) {
-      //       this.imageSize = this.imageSize.add(diffY);
-      //     }
-      //     if (["left-top", "left", "left-bottom"].includes(controlType)) {
-      //       this.imageOrigin = this.imageOrigin.add(diffX);
-      //       this.imageSize = this.imageSize.sub(diffX);
-      //     }
-      //     if (["right-top", "right", "right-bottom"].includes(controlType)) {
-      //       this.imageSize = this.imageSize.add(diffX);
-      //     }
-      //
-      //     return;
-      //   }
-      // }
-
-      // 画像の衝突判定
-      if (checkBoxHit(mousePosition, this.imageOrigin, this.imageSize)) {
-        this.canvas.style.cursor = "pointer";
-        if (this.draggingOrigin == null) return;
-
-        // ドラッグ開始位置が衝突判定外だったら移動しない
-        if (!checkBoxHit(this.draggingOrigin, this.imageOrigin, this.imageSize))
-          return;
-
-        // ドラッグ処理
-        this.imageOrigin = this.imageOrigin.add(
-          mousePosition.sub(this.draggingOrigin)
-        );
-        this.draggingOrigin = mousePosition;
-      } else {
-        this.canvas.style.cursor = "auto";
-      }
-    } else if (eventType === "up") {
-      this.draggingOrigin = null;
-    } else {
-      unreachableCode(eventType);
     }
+  }
+
+  private handleMouseMove(mousePosition: Vector) {
+    this.setHitTypeAndCursor(mousePosition);
+    this.handleDrag(mousePosition);
+    this.draggingOrigin = mousePosition;
+  }
+
+  private setHitTypeAndCursor(mousePosition: Vector) {
+    // 型指定を省略するために宣言後にnull代入している
+    let hitType = this.hitType;
+    hitType = null;
+    if (checkBoxHit(mousePosition, this.imageOrigin, this.imageSize)) {
+      hitType = "image";
+      this.canvas.style.cursor = "pointer";
+    }
+    for (const [
+      controlType,
+      position,
+    ] of this.getBoundingBoxControlPositions().entries()) {
+      if (checkBoxHit(mousePosition, position, CONTROL_SIZE)) {
+        hitType = controlType;
+        this.canvas.style.cursor =
+          BOUNDING_BOX_CONTROL_CURSOR.get(controlType) ?? "pointer";
+      }
+    }
+    this.hitType = hitType;
+    if (hitType == null) {
+      this.canvas.style.cursor = "auto";
+    }
+  }
+
+  private handleMouseUp(mousePosition: Vector) {
+    this.draggingOrigin = null;
+    this.draggingType = null;
   }
 
   private renderBoundingBox() {
