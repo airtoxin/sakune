@@ -1,10 +1,6 @@
 {
   "name": "aqkn",
   "version": "1.0.0",
-  "main": "dist/aqkn.cjs.js",
-  "module": "dist/aqkn.esm.js",
-  "browser": "dist/aqkn.umd.js",
-  "types": "dist/aqkn.d.ts",
   "repository": "git@github.com:airtoxin/aqkn.git",
   "author": "airtoxin <airtoxin@icloud.com>",
   "license": "MIT",
@@ -19,9 +15,6 @@
     "tslib": "2.3.0",
     "typescript": "4.3.2"
   },
-  "files": [
-    "dist"
-  ],
   "dependencies": {
     "short-uuid": "4.2.0"
   }
