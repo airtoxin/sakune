@@ -1,4 +1,3 @@
-import React from "react";
 import { createCanvas } from "./canvas";
 
 // const pieces = createPieces(

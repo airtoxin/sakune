@@ -43,6 +43,7 @@ export class AqknImage {
   private imageOrigin: Vector;
   private imageSize: Vector;
   private draggingOrigin: Vector | null = null;
+  private dragType: "image" | BOUNDING_BOX_CONTROL_POSITION | null = null;
 
   constructor(
     readonly canvas: HTMLCanvasElement,
@@ -88,45 +89,78 @@ export class AqknImage {
   ) {
     if (eventType === "down") {
       this.draggingOrigin = mousePosition;
-    } else if (eventType === "move") {
-      // バウンディングボックスの制御ポイントの衝突判定
+      // 制御ポイントの衝突判定のが優先なので後にチェックする
+      if (checkBoxHit(mousePosition, this.imageOrigin, this.imageSize)) {
+        this.dragType = "image";
+      }
       for (const [
         controlType,
         position,
       ] of this.getBoundingBoxControlPositions().entries()) {
         if (checkBoxHit(mousePosition, position, CONTROL_SIZE)) {
-          this.canvas.style.cursor =
-            BOUNDING_BOX_CONTROL_CURSOR.get(controlType)!;
-
-          // ドラッグ処理
-          if (this.draggingOrigin == null) return;
-          // ドラッグ開始位置が衝突判定外だったら移動しない
-          if (!checkBoxHit(this.draggingOrigin, position, CONTROL_SIZE)) return;
-          const diffX = Vector.createX(
-            mousePosition.sub(this.draggingOrigin).x
-          );
-          const diffY = Vector.createY(
-            mousePosition.sub(this.draggingOrigin).y
-          );
-          this.draggingOrigin = mousePosition;
-          if (["left-top", "top", "right-top"].includes(controlType)) {
-            this.imageOrigin = this.imageOrigin.add(diffY);
-            this.imageSize = this.imageSize.sub(diffY);
-          }
-          if (["left-bottom", "bottom", "right-bottom"].includes(controlType)) {
-            this.imageSize = this.imageSize.add(diffY);
-          }
-          if (["left-top", "left", "left-bottom"].includes(controlType)) {
-            this.imageOrigin = this.imageOrigin.add(diffX);
-            this.imageSize = this.imageSize.sub(diffX);
-          }
-          if (["right-top", "right", "right-bottom"].includes(controlType)) {
-            this.imageSize = this.imageSize.add(diffX);
-          }
-
-          return;
+          this.dragType = controlType;
+          break;
         }
       }
+    } else if (eventType === "move") {
+      if (this.draggingOrigin == null) return;
+      if (this.dragType == null) return;
+      const diffX = Vector.createX(mousePosition.sub(this.draggingOrigin).x);
+      const diffY = Vector.createY(mousePosition.sub(this.draggingOrigin).y);
+      if (["left-top", "top", "right-top"].includes(this.dragType)) {
+        this.imageOrigin = this.imageOrigin.add(diffY);
+        this.imageSize = this.imageSize.sub(diffY);
+      }
+      if (["left-bottom", "bottom", "right-bottom"].includes(this.dragType)) {
+        this.imageSize = this.imageSize.add(diffY);
+      }
+      if (["left-top", "left", "left-bottom"].includes(this.dragType)) {
+        this.imageOrigin = this.imageOrigin.add(diffX);
+        this.imageSize = this.imageSize.sub(diffX);
+      }
+      if (["right-top", "right", "right-bottom"].includes(this.dragType)) {
+        this.imageSize = this.imageSize.add(diffX);
+      }
+      this.draggingOrigin = mousePosition;
+
+      // // バウンディングボックスの制御ポイントの衝突判定
+      // for (const [
+      //   controlType,
+      //   position,
+      // ] of this.getBoundingBoxControlPositions().entries()) {
+      //   if (checkBoxHit(mousePosition, position, CONTROL_SIZE)) {
+      //     this.canvas.style.cursor =
+      //       BOUNDING_BOX_CONTROL_CURSOR.get(controlType)!;
+      //
+      //     // ドラッグ処理
+      //     if (this.draggingOrigin == null) return;
+      //     // ドラッグ開始位置が衝突判定外だったら移動しない
+      //     if (!checkBoxHit(this.draggingOrigin, position, CONTROL_SIZE)) return;
+      //     const diffX = Vector.createX(
+      //       mousePosition.sub(this.draggingOrigin).x
+      //     );
+      //     const diffY = Vector.createY(
+      //       mousePosition.sub(this.draggingOrigin).y
+      //     );
+      //     this.draggingOrigin = mousePosition;
+      //     if (["left-top", "top", "right-top"].includes(controlType)) {
+      //       this.imageOrigin = this.imageOrigin.add(diffY);
+      //       this.imageSize = this.imageSize.sub(diffY);
+      //     }
+      //     if (["left-bottom", "bottom", "right-bottom"].includes(controlType)) {
+      //       this.imageSize = this.imageSize.add(diffY);
+      //     }
+      //     if (["left-top", "left", "left-bottom"].includes(controlType)) {
+      //       this.imageOrigin = this.imageOrigin.add(diffX);
+      //       this.imageSize = this.imageSize.sub(diffX);
+      //     }
+      //     if (["right-top", "right", "right-bottom"].includes(controlType)) {
+      //       this.imageSize = this.imageSize.add(diffX);
+      //     }
+      //
+      //     return;
+      //   }
+      // }
 
       // 画像の衝突判定
       if (checkBoxHit(mousePosition, this.imageOrigin, this.imageSize)) {
