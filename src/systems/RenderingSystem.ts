@@ -3,7 +3,8 @@ import { ImageEntity } from "../entities/ImageEntity";
 import { HitBoxComponent } from "../components/HitBoxComponent";
 import { ColorComponent } from "../components/ColorComponent";
 import { ImageComponent } from "../components/ImageComponent";
-import { Component, Entity, System } from "../ecs";
+import { Entity, System } from "../ecs";
+import { BoxComponent } from "../components/BoxComponent";
 
 export class RenderingSystem extends System {
   // 先の要素から先にレンダリングされる = 背面にある
@@ -14,7 +15,7 @@ export class RenderingSystem extends System {
     private readonly ctx: CanvasRenderingContext2D
   ) {
     super([
-      [HitBoxComponent.type, ColorComponent.type],
+      [BoxComponent.type, ColorComponent.type],
       [HitBoxComponent.type, ImageComponent.type],
     ]);
     this.canvas.style.border = "solid";
@@ -52,15 +53,15 @@ export class RenderingSystem extends System {
 
     this.ctx.lineWidth = 1;
 
-    const [boxHitComponent] = HitBoxComponent.get(entity);
+    const [boxComponent] = BoxComponent.get(entity);
     const [colorComponent] = ColorComponent.get(entity);
 
-    if (boxHitComponent == null) return;
+    if (boxComponent == null) return;
 
     this.ctx.beginPath();
     this.ctx.rect(
-      ...boxHitComponent.data.position.destruct(),
-      ...boxHitComponent.data.size.destruct()
+      ...boxComponent.data.position.destruct(),
+      ...boxComponent.data.size.destruct()
     );
 
     if (colorComponent != null) {

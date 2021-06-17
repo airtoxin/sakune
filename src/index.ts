@@ -29,7 +29,16 @@ world.addEntity(
 );
 world.addEntity(
   new SimpleBoxEntity({
-    position: new Vector(50, 50),
+    position: new Vector(230, 230),
+    size: new Vector(100, 100),
+    stroke: "orange",
+    fill: "teal",
+    draggable: true,
+  })
+);
+world.addEntity(
+  new SimpleBoxEntity({
+    position: new Vector(250, 250),
     size: new Vector(100, 100),
     stroke: "red",
     fill: "blue",

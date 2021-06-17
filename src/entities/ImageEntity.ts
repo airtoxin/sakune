@@ -14,10 +14,12 @@ export class ImageEntity extends Entity {
     option.img = option.img || new Image();
     option.img.src = option.src;
 
+    const hitBoxComponent = new HitBoxComponent(option);
+
     if (option.img.src == null) {
       option.img.addEventListener("load", (event) => {
         if (event.target instanceof HTMLImageElement) {
-          boxHitComponent.data.size = new Vector(
+          hitBoxComponent.data.size = new Vector(
             event.target.width,
             event.target.height
           );
@@ -25,10 +27,8 @@ export class ImageEntity extends Entity {
       });
     }
 
-    const boxHitComponent = new HitBoxComponent(option);
-
     this.add(new ImageComponent(option));
-    this.add(boxHitComponent);
+    this.add(hitBoxComponent);
     this.add(new DraggableComponent(option));
   }
 }
