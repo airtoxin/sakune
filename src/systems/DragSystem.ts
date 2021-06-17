@@ -1,10 +1,10 @@
-import { Entity, System } from "ecs-lib";
 import { RenderingSystem } from "./RenderingSystem";
 import { MouseState } from "../states/MouseState";
 import { DraggableComponent } from "../components/DraggableComponent";
 import { checkBoxHit } from "../utils";
 import { DragState } from "../states/DragState";
 import { HitBoxComponent } from "../components/HitBoxComponent";
+import { Entity, System } from "../ecs";
 
 export class DragSystem extends System {
   constructor(
@@ -12,12 +12,12 @@ export class DragSystem extends System {
     private dragState: DragState,
     private mouseState: MouseState
   ) {
-    super([HitBoxComponent.type, DraggableComponent.type]);
+    super([[HitBoxComponent.type, DraggableComponent.type]]);
   }
 
-  update(_time: number, _delta: number, _entity: Entity) {}
+  update(entity: Entity) {}
 
-  afterUpdateAll(_time: number, _entities: Entity[]) {
+  afterUpdateAll(_entities: Entity[]) {
     if (this.mouseState.draggingOrigin == null) {
       this.dragState.dragTarget = null;
     }
@@ -34,10 +34,15 @@ export class DragSystem extends System {
         this.renderingSystem.orderedEntities.reverse();
         dragTarget =
           this.renderingSystem.orderedEntities.find((entity) => {
-            const draggableComponent = DraggableComponent.oneFrom(entity);
-            if (!draggableComponent.data.draggable) return false;
+            const [draggableComponent] = DraggableComponent.get(entity);
+            if (
+              draggableComponent == null ||
+              !draggableComponent.data.draggable
+            )
+              return false;
 
-            const boxHitComponent = HitBoxComponent.oneFrom(entity);
+            const [boxHitComponent] = HitBoxComponent.get(entity);
+            if (boxHitComponent == null) return;
 
             return checkBoxHit(
               this.mouseState.position!,
@@ -50,7 +55,9 @@ export class DragSystem extends System {
       }
 
       if (dragTarget) {
-        const boxHitComponent = HitBoxComponent.oneFrom(dragTarget);
+        const [boxHitComponent] = HitBoxComponent.get(dragTarget);
+        if (boxHitComponent == null) return;
+
         boxHitComponent.data.position = boxHitComponent.data.position.add(
           this.mouseState.position.sub(this.mouseState.draggingOrigin)
         );

@@ -1,4 +1,4 @@
-import { Component } from "ecs-lib";
+import { Component } from "../ecs";
 
 export type ImageData = {
   src: string;

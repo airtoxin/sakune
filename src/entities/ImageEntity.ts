@@ -1,4 +1,3 @@
-import ECS, { Entity } from "ecs-lib";
 import { ImageComponent, ImageData } from "../components/ImageComponent";
 import {
   DraggableComponent,
@@ -6,6 +5,7 @@ import {
 } from "../components/DraggableComponent";
 import { Vector } from "../Vector";
 import { HitBoxComponent, HitBoxData } from "../components/HitBoxComponent";
+import { Entity } from "../ecs";
 
 export class ImageEntity extends Entity {
   constructor(public readonly option: ImageData & HitBoxData & DraggableData) {

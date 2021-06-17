@@ -1,9 +1,9 @@
-import { Entity, System } from "ecs-lib";
 import { SimpleBoxEntity } from "../entities/SimpleBoxEntity";
 import { ImageEntity } from "../entities/ImageEntity";
 import { HitBoxComponent } from "../components/HitBoxComponent";
 import { ColorComponent } from "../components/ColorComponent";
 import { ImageComponent } from "../components/ImageComponent";
+import { Component, Entity, System } from "../ecs";
 
 export class RenderingSystem extends System {
   // 先の要素から先にレンダリングされる = 背面にある
@@ -13,7 +13,7 @@ export class RenderingSystem extends System {
     private readonly canvas: HTMLCanvasElement,
     private readonly ctx: CanvasRenderingContext2D
   ) {
-    super([-1]);
+    super([Component.ALL_COMPONENT_TYPES]);
     this.canvas.style.border = "solid";
   }
 
@@ -27,13 +27,13 @@ export class RenderingSystem extends System {
     );
   }
 
-  beforeUpdateAll(_time: number) {
+  beforeUpdateAll() {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
   }
 
-  update(_time: number, _delta: number, _entity: Entity): void {}
+  update(_entity: Entity): void {}
 
-  afterUpdateAll(_time: number, _entities: Entity[]) {
+  afterUpdateAll(_entities: Entity[]) {
     // 自前で順番を管理するために entities は使わない
     for (const entity of this.orderedEntities) {
       if (entity instanceof SimpleBoxEntity) {
@@ -49,8 +49,8 @@ export class RenderingSystem extends System {
 
     this.ctx.lineWidth = 1;
 
-    const boxHitComponent = HitBoxComponent.oneFrom(entity);
-    const colorComponent = ColorComponent.oneFrom(entity);
+    const [boxHitComponent] = HitBoxComponent.get(entity);
+    const [colorComponent] = ColorComponent.get(entity);
 
     if (boxHitComponent == null) return;
 
@@ -83,8 +83,8 @@ export class RenderingSystem extends System {
     this.ctx.fillStyle = "white";
     this.ctx.strokeStyle = "#222";
 
-    const boxHitComponent = HitBoxComponent.oneFrom(entity);
-    const imgComponent = ImageComponent.oneFrom(entity);
+    const [boxHitComponent] = HitBoxComponent.get(entity);
+    const [imgComponent] = ImageComponent.get(entity);
 
     if (boxHitComponent == null || imgComponent == null) return;
 

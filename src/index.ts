@@ -1,4 +1,3 @@
-import ECS from "ecs-lib";
 import { Vector } from "./Vector";
 import { createCanvas } from "./canvas";
 import { MouseState } from "./states/MouseState";
@@ -7,6 +6,7 @@ import { ImageEntity } from "./entities/ImageEntity";
 import { RenderingSystem } from "./systems/RenderingSystem";
 import { DragSystem } from "./systems/DragSystem";
 import { DragState } from "./states/DragState";
+import { ECS } from "./ecs";
 
 const world = new ECS();
 const [canvas, ctx] = createCanvas(document.getElementById("root")!);

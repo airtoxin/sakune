@@ -1,4 +1,3 @@
-import { Entity } from "ecs-lib";
 import { BoxComponent, BoxData } from "../components/BoxComponent";
 import { ColorComponent, ColorData } from "../components/ColorComponent";
 import {
@@ -6,6 +5,7 @@ import {
   DraggableData,
 } from "../components/DraggableComponent";
 import { HitBoxComponent, HitBoxData } from "../components/HitBoxComponent";
+import { Entity } from "../ecs";
 
 export class SimpleBoxEntity extends Entity {
   constructor(
