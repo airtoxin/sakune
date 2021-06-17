@@ -1,11 +1,13 @@
 import ECS from "ecs-lib";
 import { Vector } from "./Vector";
 import { createCanvas } from "./canvas";
-import { MouseState } from "./MouseState";
+import { MouseState } from "./states/MouseState";
 import { SimpleBoxEntity } from "./entities/SimpleBoxEntity";
 import { ImageEntity } from "./entities/ImageEntity";
 import { RenderingSystem } from "./systems/RenderingSystem";
 import { DragSystem } from "./systems/DragSystem";
+import { DragState } from "./states/DragState";
+import { ResizeSystem } from "./systems/ResizeSystem";
 
 // const pieces = createPieces(
 //   new Map([
@@ -84,13 +86,18 @@ import { DragSystem } from "./systems/DragSystem";
 //   ])
 // );
 
+const world = new ECS();
 const [canvas, ctx] = createCanvas(document.getElementById("root")!);
 
+const dragState = new DragState();
+const mouseState = new MouseState(canvas);
+
 const renderingSystem = new RenderingSystem(canvas, ctx);
-const world = new ECS([
-  renderingSystem,
-  new DragSystem(renderingSystem, new MouseState(canvas)),
-]);
+world.addSystem(renderingSystem);
+const dragSystem = new DragSystem(renderingSystem, dragState, mouseState);
+world.addSystem(dragSystem);
+const resizeSystem = new ResizeSystem(dragState);
+world.addSystem(resizeSystem);
 
 world.addEntity(
   new ImageEntity({
@@ -98,6 +105,7 @@ world.addEntity(
     position: new Vector(10, 10),
     size: new Vector(300, 300),
     draggable: true,
+    resizable: true,
   })
 );
 world.addEntity(

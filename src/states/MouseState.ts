@@ -1,4 +1,4 @@
-import { Vector } from "./Vector";
+import { Vector } from "../Vector";
 
 export class MouseState {
   public draggingOrigin: Vector | null = null;

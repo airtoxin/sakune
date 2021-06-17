@@ -6,9 +6,13 @@ import {
   DraggableData,
 } from "../components/DraggableComponent";
 import { Vector } from "../Vector";
+import {
+  BoundingBoxComponent,
+  BoundingBoxData,
+} from "../components/BoundingBoxComponent";
 
 export class ImageEntity extends Entity {
-  constructor(option: ImageData & BoxData & DraggableData) {
+  constructor(option: ImageData & BoxData & DraggableData & BoundingBoxData) {
     super();
 
     option.img = option.img || new Image();
@@ -30,5 +34,6 @@ export class ImageEntity extends Entity {
     this.add(new ImageComponent(option));
     this.add(boxComponent);
     this.add(new DraggableComponent(option));
+    this.add(new BoundingBoxComponent(option));
   }
 }

@@ -1,15 +1,15 @@
 import { Entity, System } from "ecs-lib";
 import { RenderingSystem } from "./RenderingSystem";
-import { MouseState } from "../MouseState";
+import { MouseState } from "../states/MouseState";
 import { BoxComponent } from "../components/BoxComponent";
 import { DraggableComponent } from "../components/DraggableComponent";
 import { checkBoxHit } from "../utils";
+import { DragState } from "../states/DragState";
 
 export class DragSystem extends System {
-  private lastDraggingEntity: Entity | null = null;
-
   constructor(
     private renderingSystem: RenderingSystem,
+    private dragState: DragState,
     private mouseState: MouseState
   ) {
     super([BoxComponent.type, DraggableComponent.type]);
@@ -19,15 +19,15 @@ export class DragSystem extends System {
 
   afterUpdateAll(_time: number, _entities: Entity[]) {
     if (this.mouseState.draggingOrigin == null) {
-      this.lastDraggingEntity = null;
+      this.dragState.dragTarget = null;
     }
     if (
       this.mouseState.draggingOrigin != null &&
       this.mouseState.position != null
     ) {
       let dragTarget: Entity | null = null;
-      if (this.lastDraggingEntity) {
-        dragTarget = this.lastDraggingEntity;
+      if (this.dragState.dragTarget) {
+        dragTarget = this.dragState.dragTarget;
       } else {
         // 自前で順番を管理するために entities は使わない
         // 前面のものを優先するため一旦反転する
@@ -63,7 +63,7 @@ export class DragSystem extends System {
             .concat([dragTarget]);
 
         // ドラッグ状態を継続するために最後にドラッグ移動したものを記録しておく
-        this.lastDraggingEntity = dragTarget;
+        this.dragState.dragTarget = dragTarget;
       }
     }
   }
