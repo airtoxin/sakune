@@ -1,9 +1,11 @@
 import ECS from "ecs-lib";
-import { ImageEntity, SimpleBoxEntity } from "./Entities";
 import { Vector } from "./Vector";
-import { DragSystem, RenderingSystem } from "./Systems";
 import { createCanvas } from "./canvas";
 import { MouseState } from "./MouseState";
+import { SimpleBoxEntity } from "./entities/SimpleBoxEntity";
+import { ImageEntity } from "./entities/ImageEntity";
+import { RenderingSystem } from "./systems/RenderingSystem";
+import { DragSystem } from "./systems/DragSystem";
 
 // const pieces = createPieces(
 //   new Map([

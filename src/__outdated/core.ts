@@ -1,6 +1,6 @@
-import { Vector } from "./Vector";
+import { Vector } from "../Vector";
 import { generate } from "short-uuid";
-import { seq } from "./utils";
+import { seq } from "../utils";
 
 export interface AqknOption<TPieceName extends string> {
   size: Vector;

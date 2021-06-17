@@ -1,5 +1,5 @@
-import { Vector } from "./Vector";
-import { checkBoxHit } from "./utils";
+import { Vector } from "../Vector";
+import { checkBoxHit } from "../utils";
 
 const CONTROL_SIZE = new Vector(10, 10);
 const HALF_CONTROL_SIZE = CONTROL_SIZE.div(2);

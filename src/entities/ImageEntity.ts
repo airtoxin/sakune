@@ -1,27 +1,14 @@
 import { Entity } from "ecs-lib";
+import { ImageComponent, ImageData } from "../components/ImageComponent";
+import { BoxComponent, BoxData } from "../components/BoxComponent";
 import {
-  Box,
-  BoxComponent,
-  Color,
-  ColorComponent,
-  Draggable,
   DraggableComponent,
-  Img,
-  ImgComponent,
-} from "./Components";
-import { Vector } from "./Vector";
-
-export class SimpleBoxEntity extends Entity {
-  constructor(option: Box & Color & Draggable) {
-    super();
-    this.add(new BoxComponent(option));
-    this.add(new ColorComponent(option));
-    this.add(new DraggableComponent(option));
-  }
-}
+  DraggableData,
+} from "../components/DraggableComponent";
+import { Vector } from "../Vector";
 
 export class ImageEntity extends Entity {
-  constructor(option: Img & Box & Draggable) {
+  constructor(option: ImageData & BoxData & DraggableData) {
     super();
 
     option.img = option.img || new Image();
@@ -40,7 +27,7 @@ export class ImageEntity extends Entity {
 
     const boxComponent = new BoxComponent(option);
 
-    this.add(new ImgComponent(option));
+    this.add(new ImageComponent(option));
     this.add(boxComponent);
     this.add(new DraggableComponent(option));
   }
