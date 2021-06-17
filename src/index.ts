@@ -84,9 +84,10 @@ import { MouseState } from "./MouseState";
 
 const [canvas, ctx] = createCanvas(document.getElementById("root")!);
 
+const renderingSystem = new RenderingSystem(canvas, ctx);
 const world = new ECS([
-  new RenderingSystem(canvas, ctx),
-  new DragSystem(new MouseState(canvas)),
+  renderingSystem,
+  new DragSystem(renderingSystem.orderedEntities, new MouseState(canvas)),
 ]);
 
 world.addEntity(
