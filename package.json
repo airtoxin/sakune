@@ -16,7 +16,6 @@
     "typescript": "4.3.2"
   },
   "dependencies": {
-    "ecs-lib": "^0.8.0-pre.2",
     "short-uuid": "4.2.0"
   }
 }
