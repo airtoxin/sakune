@@ -104,6 +104,7 @@ export class RenderingSystem extends System {
 }
 
 export class DragSystem extends System {
+  private lastDraggingEntity: Entity | null = null;
   constructor(
     private renderingSystem: RenderingSystem,
     private mouseState: MouseState
@@ -114,30 +115,39 @@ export class DragSystem extends System {
   update(_time: number, _delta: number, _entity: Entity) {}
 
   afterUpdateAll(_time: number, _entities: Entity[]) {
+    if (this.mouseState.draggingOrigin == null) {
+      this.lastDraggingEntity = null;
+    }
     if (
       this.mouseState.draggingOrigin != null &&
       this.mouseState.position != null
     ) {
-      // 自前で順番を管理するために entities は使わない
-      // 前面のものを優先するため一旦反転する
-      this.renderingSystem.orderedEntities.reverse();
-      const entity = this.renderingSystem.orderedEntities.find((entity) => {
-        const draggableComponent = DraggableComponent.oneFrom(entity);
-        if (!draggableComponent.data.draggable) return false;
+      let dragTarget: Entity | null = null;
+      if (this.lastDraggingEntity) {
+        dragTarget = this.lastDraggingEntity;
+      } else {
+        // 自前で順番を管理するために entities は使わない
+        // 前面のものを優先するため一旦反転する
+        this.renderingSystem.orderedEntities.reverse();
+        dragTarget =
+          this.renderingSystem.orderedEntities.find((entity) => {
+            const draggableComponent = DraggableComponent.oneFrom(entity);
+            if (!draggableComponent.data.draggable) return false;
 
-        const boxComponent = BoxComponent.oneFrom(entity);
+            const boxComponent = BoxComponent.oneFrom(entity);
 
-        return checkBoxHit(
-          this.mouseState.position!,
-          boxComponent.data.position,
-          boxComponent.data.size
-        );
-      });
-      // 反転を戻す
-      this.renderingSystem.orderedEntities.reverse();
+            return checkBoxHit(
+              this.mouseState.position!,
+              boxComponent.data.position,
+              boxComponent.data.size
+            );
+          }) || null;
+        // 反転を戻す
+        this.renderingSystem.orderedEntities.reverse();
+      }
 
-      if (entity) {
-        const boxComponent = BoxComponent.oneFrom(entity);
+      if (dragTarget) {
+        const boxComponent = BoxComponent.oneFrom(dragTarget);
         boxComponent.data.position = boxComponent.data.position.add(
           this.mouseState.position.sub(this.mouseState.draggingOrigin)
         );
@@ -146,8 +156,11 @@ export class DragSystem extends System {
         // 触ったものを前面に移動する
         this.renderingSystem.orderedEntities =
           this.renderingSystem.orderedEntities
-            .filter((e) => e.id !== entity.id)
-            .concat([entity]);
+            .filter((e) => e.id !== dragTarget!.id)
+            .concat([dragTarget]);
+
+        // ドラッグ状態を継続するために最後にドラッグ移動したものを記録しておく
+        this.lastDraggingEntity = dragTarget;
       }
     }
   }
