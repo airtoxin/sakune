@@ -1,21 +1,14 @@
-import { Entity } from "ecs-lib";
+import ECS, { Entity } from "ecs-lib";
 import { ImageComponent, ImageData } from "../components/ImageComponent";
-import { BoxComponent, BoxData } from "../components/BoxComponent";
 import {
   DraggableComponent,
   DraggableData,
 } from "../components/DraggableComponent";
 import { Vector } from "../Vector";
-import {
-  BoundingBoxComponent,
-  BoundingBoxData,
-} from "../components/BoundingBoxComponent";
-import { BoxHitData, BoxHitComponent } from "../components/BoxHitComponent";
+import { HitBoxComponent, HitBoxData } from "../components/HitBoxComponent";
 
 export class ImageEntity extends Entity {
-  constructor(
-    option: ImageData & BoxHitData & DraggableData & BoundingBoxData
-  ) {
+  constructor(public readonly option: ImageData & HitBoxData & DraggableData) {
     super();
 
     option.img = option.img || new Image();
@@ -32,11 +25,10 @@ export class ImageEntity extends Entity {
       });
     }
 
-    const boxHitComponent = new BoxHitComponent(option);
+    const boxHitComponent = new HitBoxComponent(option);
 
     this.add(new ImageComponent(option));
     this.add(boxHitComponent);
     this.add(new DraggableComponent(option));
-    this.add(new BoundingBoxComponent(option));
   }
 }

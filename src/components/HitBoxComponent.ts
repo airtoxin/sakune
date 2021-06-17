@@ -1,8 +1,8 @@
 import { Vector } from "../Vector";
 import { Component } from "ecs-lib";
 
-export type BoxHitData = {
+export type HitBoxData = {
   position: Vector;
   size: Vector;
 };
-export const BoxHitComponent = Component.register<BoxHitData>();
+export const HitBoxComponent = Component.register<HitBoxData>();

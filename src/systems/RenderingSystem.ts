@@ -1,7 +1,7 @@
 import { Entity, System } from "ecs-lib";
 import { SimpleBoxEntity } from "../entities/SimpleBoxEntity";
 import { ImageEntity } from "../entities/ImageEntity";
-import { BoxHitComponent } from "../components/BoxHitComponent";
+import { HitBoxComponent } from "../components/HitBoxComponent";
 import { ColorComponent } from "../components/ColorComponent";
 import { ImageComponent } from "../components/ImageComponent";
 
@@ -49,7 +49,7 @@ export class RenderingSystem extends System {
 
     this.ctx.lineWidth = 1;
 
-    const boxHitComponent = BoxHitComponent.oneFrom(entity);
+    const boxHitComponent = HitBoxComponent.oneFrom(entity);
     const colorComponent = ColorComponent.oneFrom(entity);
 
     if (boxHitComponent == null) return;
@@ -83,7 +83,7 @@ export class RenderingSystem extends System {
     this.ctx.fillStyle = "white";
     this.ctx.strokeStyle = "#222";
 
-    const boxHitComponent = BoxHitComponent.oneFrom(entity);
+    const boxHitComponent = HitBoxComponent.oneFrom(entity);
     const imgComponent = ImageComponent.oneFrom(entity);
 
     if (boxHitComponent == null || imgComponent == null) return;

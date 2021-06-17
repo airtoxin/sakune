@@ -5,13 +5,15 @@ import {
   DraggableComponent,
   DraggableData,
 } from "../components/DraggableComponent";
-import { BoxHitComponent, BoxHitData } from "../components/BoxHitComponent";
+import { HitBoxComponent, HitBoxData } from "../components/HitBoxComponent";
 
 export class SimpleBoxEntity extends Entity {
-  constructor(option: BoxData & BoxHitData & ColorData & DraggableData) {
+  constructor(
+    public readonly option: BoxData & HitBoxData & ColorData & DraggableData
+  ) {
     super();
     this.add(new BoxComponent(option));
-    this.add(new BoxHitComponent(option));
+    this.add(new HitBoxComponent(option));
     this.add(new ColorComponent(option));
     this.add(new DraggableComponent(option));
   }

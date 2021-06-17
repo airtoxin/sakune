@@ -4,7 +4,7 @@ import { MouseState } from "../states/MouseState";
 import { DraggableComponent } from "../components/DraggableComponent";
 import { checkBoxHit } from "../utils";
 import { DragState } from "../states/DragState";
-import { BoxHitComponent } from "../components/BoxHitComponent";
+import { HitBoxComponent } from "../components/HitBoxComponent";
 
 export class DragSystem extends System {
   constructor(
@@ -12,7 +12,7 @@ export class DragSystem extends System {
     private dragState: DragState,
     private mouseState: MouseState
   ) {
-    super([BoxHitComponent.type, DraggableComponent.type]);
+    super([HitBoxComponent.type, DraggableComponent.type]);
   }
 
   update(_time: number, _delta: number, _entity: Entity) {}
@@ -37,7 +37,7 @@ export class DragSystem extends System {
             const draggableComponent = DraggableComponent.oneFrom(entity);
             if (!draggableComponent.data.draggable) return false;
 
-            const boxHitComponent = BoxHitComponent.oneFrom(entity);
+            const boxHitComponent = HitBoxComponent.oneFrom(entity);
 
             return checkBoxHit(
               this.mouseState.position!,
@@ -50,7 +50,7 @@ export class DragSystem extends System {
       }
 
       if (dragTarget) {
-        const boxHitComponent = BoxHitComponent.oneFrom(dragTarget);
+        const boxHitComponent = HitBoxComponent.oneFrom(dragTarget);
         boxHitComponent.data.position = boxHitComponent.data.position.add(
           this.mouseState.position.sub(this.mouseState.draggingOrigin)
         );

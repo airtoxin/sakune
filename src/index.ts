@@ -7,84 +7,6 @@ import { ImageEntity } from "./entities/ImageEntity";
 import { RenderingSystem } from "./systems/RenderingSystem";
 import { DragSystem } from "./systems/DragSystem";
 import { DragState } from "./states/DragState";
-import { ResizeSystem } from "./systems/ResizeSystem";
-
-// const pieces = createPieces(
-//   new Map([
-//     [
-//       "BigSquare-Black",
-//       {
-//         num: 8,
-//         color: "black",
-//         shape: {
-//           type: "rect",
-//           size: new Vector(80, 80),
-//           height: 10,
-//         },
-//       },
-//     ],
-//     // [
-//     //   "BigSquare-White",
-//     //   {
-//     //     num: 8,
-//     //     color: "white",
-//     //     shape: {
-//     //       type: "rect",
-//     //       size: new Vector(80, 80),
-//     //       height: 10,
-//     //     },
-//     //   },
-//     // ],
-//     // [
-//     //   "Rect-Black",
-//     //   {
-//     //     num: 8,
-//     //     color: "black",
-//     //     shape: {
-//     //       type: "rect",
-//     //       size: new Vector(80, 40),
-//     //       height: 10,
-//     //     },
-//     //   },
-//     // ],
-//     // [
-//     //   "Rect-White",
-//     //   {
-//     //     num: 8,
-//     //     color: "white",
-//     //     shape: {
-//     //       type: "rect",
-//     //       size: new Vector(80, 40),
-//     //       height: 10,
-//     //     },
-//     //   },
-//     // ],
-//     // [
-//     //   "SmallSquare-Black",
-//     //   {
-//     //     num: 3,
-//     //     color: "black",
-//     //     shape: {
-//     //       type: "rect",
-//     //       size: new Vector(40, 40),
-//     //       height: 10,
-//     //     },
-//     //   },
-//     // ],
-//     // [
-//     //   "SmallSquare-White",
-//     //   {
-//     //     num: 3,
-//     //     color: "white",
-//     //     shape: {
-//     //       type: "rect",
-//     //       size: new Vector(40, 40),
-//     //       height: 10,
-//     //     },
-//     //   },
-//     // ],
-//   ])
-// );
 
 const world = new ECS();
 const [canvas, ctx] = createCanvas(document.getElementById("root")!);
@@ -96,8 +18,6 @@ const renderingSystem = new RenderingSystem(canvas, ctx);
 world.addSystem(renderingSystem);
 const dragSystem = new DragSystem(renderingSystem, dragState, mouseState);
 world.addSystem(dragSystem);
-const resizeSystem = new ResizeSystem(dragState);
-world.addSystem(resizeSystem);
 
 world.addEntity(
   new ImageEntity({
@@ -105,7 +25,6 @@ world.addEntity(
     position: new Vector(10, 10),
     size: new Vector(300, 300),
     draggable: true,
-    resizable: true,
   })
 );
 world.addEntity(
@@ -123,13 +42,3 @@ setInterval(() => {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   world.update();
 }, 16);
-
-// render(
-//   <Aqkn
-//     option={{
-//       size: new Vector(1000, 1000),
-//       pieces,
-//     }}
-//   />,
-//   document.getElementById("root")
-// );
