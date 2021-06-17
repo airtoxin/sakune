@@ -1,4 +1,9 @@
+import ECS from "ecs-lib";
+import { ImageEntity, SimpleBoxEntity } from "./Entities";
+import { Vector } from "./Vector";
+import { DragSystem, RenderingSystem } from "./Systems";
 import { createCanvas } from "./canvas";
+import { MouseState } from "./MouseState";
 
 // const pieces = createPieces(
 //   new Map([
@@ -77,7 +82,36 @@ import { createCanvas } from "./canvas";
 //   ])
 // );
 
-createCanvas(document.getElementById("root")!);
+const [canvas, ctx] = createCanvas(document.getElementById("root")!);
+
+const world = new ECS([
+  new RenderingSystem(canvas, ctx),
+  new DragSystem(new MouseState(canvas)),
+]);
+
+world.addEntity(
+  new ImageEntity({
+    src: "https://cf.geekdo-images.com/EFJ0PGh7xq_UHb1RkfITgA__imagepagezoom/img/wFxN73HF1W8_0L8yvQik6wEiTW4=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic369329.jpg",
+    position: new Vector(10, 10),
+    size: new Vector(300, 300),
+    draggable: true,
+  })
+);
+world.addEntity(
+  new SimpleBoxEntity({
+    position: new Vector(50, 50),
+    size: new Vector(100, 100),
+    stroke: "red",
+    fill: "blue",
+    draggable: true,
+  })
+);
+
+// TODO: requestAnimationFrame
+setInterval(() => {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  world.update();
+}, 16);
 
 // render(
 //   <Aqkn

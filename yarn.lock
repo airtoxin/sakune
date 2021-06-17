@@ -2138,6 +2138,11 @@ ecc-jsbn@~0.1.1:
     jsbn "~0.1.0"
     safer-buffer "^2.1.0"
 
+ecs-lib@^0.8.0-pre.2:
+  version "0.8.0-pre.2"
+  resolved "https://registry.yarnpkg.com/ecs-lib/-/ecs-lib-0.8.0-pre.2.tgz#d2fbe6fcf58f6e4fecaa5df19596d072b847299a"
+  integrity sha512-eG2WR4DkyxBY8SSpiNJWtESSVynxBUo/CPcsaY6kXtI62PFr2tXcfic7rGujjqj+tjbakXO5vZP8mb7fhpuAXw==
+
 ee-first@1.1.1:
   version "1.1.1"
   resolved "https://registry.yarnpkg.com/ee-first/-/ee-first-1.1.1.tgz#590c61156b0ae2f4f0255732a158b266bc56b21d"
