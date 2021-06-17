@@ -105,7 +105,7 @@ export class RenderingSystem extends System {
 
 export class DragSystem extends System {
   constructor(
-    private orderedEntities: Entity[],
+    private renderingSystem: RenderingSystem,
     private mouseState: MouseState
   ) {
     super([BoxComponent.type, DraggableComponent.type]);
@@ -120,8 +120,8 @@ export class DragSystem extends System {
     ) {
       // 自前で順番を管理するために entities は使わない
       // 前面のものを優先するため一旦反転する
-      this.orderedEntities.reverse();
-      const entity = this.orderedEntities.find((entity) => {
+      this.renderingSystem.orderedEntities.reverse();
+      const entity = this.renderingSystem.orderedEntities.find((entity) => {
         const draggableComponent = DraggableComponent.oneFrom(entity);
         if (!draggableComponent.data.draggable) return false;
 
@@ -134,7 +134,7 @@ export class DragSystem extends System {
         );
       });
       // 反転を戻す
-      this.orderedEntities.reverse();
+      this.renderingSystem.orderedEntities.reverse();
 
       if (entity) {
         const boxComponent = BoxComponent.oneFrom(entity);
@@ -142,6 +142,12 @@ export class DragSystem extends System {
           this.mouseState.position.sub(this.mouseState.draggingOrigin)
         );
         this.mouseState.draggingOrigin = this.mouseState.position;
+
+        // 触ったものを前面に移動する
+        this.renderingSystem.orderedEntities =
+          this.renderingSystem.orderedEntities
+            .filter((e) => e.id !== entity.id)
+            .concat([entity]);
       }
     }
   }

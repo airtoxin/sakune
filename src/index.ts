@@ -87,7 +87,7 @@ const [canvas, ctx] = createCanvas(document.getElementById("root")!);
 const renderingSystem = new RenderingSystem(canvas, ctx);
 const world = new ECS([
   renderingSystem,
-  new DragSystem(renderingSystem.orderedEntities, new MouseState(canvas)),
+  new DragSystem(renderingSystem, new MouseState(canvas)),
 ]);
 
 world.addEntity(
