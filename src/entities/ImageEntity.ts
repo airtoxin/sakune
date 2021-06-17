@@ -10,9 +10,12 @@ import {
   BoundingBoxComponent,
   BoundingBoxData,
 } from "../components/BoundingBoxComponent";
+import { BoxHitData, BoxHitComponent } from "../components/BoxHitComponent";
 
 export class ImageEntity extends Entity {
-  constructor(option: ImageData & BoxData & DraggableData & BoundingBoxData) {
+  constructor(
+    option: ImageData & BoxHitData & DraggableData & BoundingBoxData
+  ) {
     super();
 
     option.img = option.img || new Image();
@@ -21,7 +24,7 @@ export class ImageEntity extends Entity {
     if (option.img.src == null) {
       option.img.addEventListener("load", (event) => {
         if (event.target instanceof HTMLImageElement) {
-          boxComponent.data.size = new Vector(
+          boxHitComponent.data.size = new Vector(
             event.target.width,
             event.target.height
           );
@@ -29,10 +32,10 @@ export class ImageEntity extends Entity {
       });
     }
 
-    const boxComponent = new BoxComponent(option);
+    const boxHitComponent = new BoxHitComponent(option);
 
     this.add(new ImageComponent(option));
-    this.add(boxComponent);
+    this.add(boxHitComponent);
     this.add(new DraggableComponent(option));
     this.add(new BoundingBoxComponent(option));
   }

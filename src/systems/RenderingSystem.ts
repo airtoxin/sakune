@@ -1,7 +1,7 @@
 import { Entity, System } from "ecs-lib";
 import { SimpleBoxEntity } from "../entities/SimpleBoxEntity";
 import { ImageEntity } from "../entities/ImageEntity";
-import { BoxComponent } from "../components/BoxComponent";
+import { BoxHitComponent } from "../components/BoxHitComponent";
 import { ColorComponent } from "../components/ColorComponent";
 import { ImageComponent } from "../components/ImageComponent";
 
@@ -49,15 +49,15 @@ export class RenderingSystem extends System {
 
     this.ctx.lineWidth = 1;
 
-    const boxComponent = BoxComponent.oneFrom(entity);
+    const boxHitComponent = BoxHitComponent.oneFrom(entity);
     const colorComponent = ColorComponent.oneFrom(entity);
 
-    if (boxComponent == null) return;
+    if (boxHitComponent == null) return;
 
     this.ctx.beginPath();
     this.ctx.rect(
-      ...boxComponent.data.position.destruct(),
-      ...boxComponent.data.size.destruct()
+      ...boxHitComponent.data.position.destruct(),
+      ...boxHitComponent.data.size.destruct()
     );
 
     if (colorComponent != null) {
@@ -83,16 +83,16 @@ export class RenderingSystem extends System {
     this.ctx.fillStyle = "white";
     this.ctx.strokeStyle = "#222";
 
-    const boxComponent = BoxComponent.oneFrom(entity);
+    const boxHitComponent = BoxHitComponent.oneFrom(entity);
     const imgComponent = ImageComponent.oneFrom(entity);
 
-    if (boxComponent == null || imgComponent == null) return;
+    if (boxHitComponent == null || imgComponent == null) return;
 
     if (imgComponent.data.img != null) {
       this.ctx.drawImage(
         imgComponent.data.img,
-        ...boxComponent.data.position.destruct(),
-        ...boxComponent.data.size.destruct()
+        ...boxHitComponent.data.position.destruct(),
+        ...boxHitComponent.data.size.destruct()
       );
     }
 

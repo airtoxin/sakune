@@ -1,10 +1,10 @@
 import { Entity, System } from "ecs-lib";
 import { RenderingSystem } from "./RenderingSystem";
 import { MouseState } from "../states/MouseState";
-import { BoxComponent } from "../components/BoxComponent";
 import { DraggableComponent } from "../components/DraggableComponent";
 import { checkBoxHit } from "../utils";
 import { DragState } from "../states/DragState";
+import { BoxHitComponent } from "../components/BoxHitComponent";
 
 export class DragSystem extends System {
   constructor(
@@ -12,7 +12,7 @@ export class DragSystem extends System {
     private dragState: DragState,
     private mouseState: MouseState
   ) {
-    super([BoxComponent.type, DraggableComponent.type]);
+    super([BoxHitComponent.type, DraggableComponent.type]);
   }
 
   update(_time: number, _delta: number, _entity: Entity) {}
@@ -37,12 +37,12 @@ export class DragSystem extends System {
             const draggableComponent = DraggableComponent.oneFrom(entity);
             if (!draggableComponent.data.draggable) return false;
 
-            const boxComponent = BoxComponent.oneFrom(entity);
+            const boxHitComponent = BoxHitComponent.oneFrom(entity);
 
             return checkBoxHit(
               this.mouseState.position!,
-              boxComponent.data.position,
-              boxComponent.data.size
+              boxHitComponent.data.position,
+              boxHitComponent.data.size
             );
           }) || null;
         // 反転を戻す
@@ -50,8 +50,8 @@ export class DragSystem extends System {
       }
 
       if (dragTarget) {
-        const boxComponent = BoxComponent.oneFrom(dragTarget);
-        boxComponent.data.position = boxComponent.data.position.add(
+        const boxHitComponent = BoxHitComponent.oneFrom(dragTarget);
+        boxHitComponent.data.position = boxHitComponent.data.position.add(
           this.mouseState.position.sub(this.mouseState.draggingOrigin)
         );
         this.mouseState.draggingOrigin = this.mouseState.position;
