@@ -13,7 +13,10 @@ export class RenderingSystem extends System {
     private readonly canvas: HTMLCanvasElement,
     private readonly ctx: CanvasRenderingContext2D
   ) {
-    super([Component.ALL_COMPONENT_TYPES]);
+    super([
+      [HitBoxComponent.type, ColorComponent.type],
+      [HitBoxComponent.type, ImageComponent.type],
+    ]);
     this.canvas.style.border = "solid";
   }
 
