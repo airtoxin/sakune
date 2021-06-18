@@ -7,7 +7,6 @@ import { RenderingSystem } from "./systems/RenderingSystem";
 import { DragSystem } from "./systems/DragSystem";
 import { DragState } from "./states/DragState";
 import { ECS } from "./ecs";
-import { BoundingBoxEntity } from "./entities/BoundingBoxEntity";
 
 const world = new ECS();
 const [canvas, ctx] = createCanvas(document.getElementById("root")!);
@@ -25,10 +24,9 @@ const imageEntity = new ImageEntity({
   position: new Vector(10, 10),
   size: new Vector(300, 300),
   draggable: true,
+  resizable: true,
 });
 world.addEntity(imageEntity);
-const boundingBoxEntity = new BoundingBoxEntity(imageEntity.option);
-world.addEntity(boundingBoxEntity);
 world.addEntity(
   new SimpleBoxEntity({
     position: new Vector(230, 230),
