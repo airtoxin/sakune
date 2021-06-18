@@ -4,18 +4,17 @@ let SEQ_COMPONENT = 1;
 
 export abstract class Entity {
   public readonly id = SEQ_ENTITY++;
-  private components: {
-    [key: number]: Set<Component<any>>;
-  } = {};
+  // 同じコンポーネントが複数回登録されることがあるので value は Set で持つ
+  private components = new Map<number, Set<Component<any>>>();
 
   // Add a component to this entity
   public add(component: Component<any>) {
-    const type = component.type;
-    if (!this.components[type]) {
-      this.components[type] = new Set();
+    const componentType = component.type;
+    if (!this.components.has(componentType)) {
+      this.components.set(componentType, new Set());
     }
 
-    this.components[type]!.add(component);
+    this.components.get(componentType)!.add(component);
   }
 }
 
@@ -29,17 +28,19 @@ export abstract class Component<T> {
   constructor(public readonly type: number, public readonly data: T) {}
 
   public static register<T>(): ComponentClassType<T> {
-    const typeId = SEQ_COMPONENT++;
+    const componentType = SEQ_COMPONENT++;
 
     class ComponentImpl extends Component<T> {
-      static type = typeId;
+      static type = componentType;
 
       static get(entity: Entity): ComponentImpl[] {
-        return Array.from(entity["components"][typeId]?.values() ?? []);
+        return Array.from(
+          entity["components"].get(componentType)?.values() ?? []
+        );
       }
 
       constructor(public readonly data: T) {
-        super(typeId, data);
+        super(componentType, data);
       }
     }
 
@@ -106,13 +107,12 @@ export class ECS {
       this.entitySystems.set(entity, new Set());
     }
 
-    const entityComponentTypes = Object.keys(entity["components"]).map((type) =>
-      Number.parseInt(type, 10)
-    );
+    const entityComponentTypes = Array.from(entity["components"].keys());
 
     // まだリレーション登録されていないならリレーション登録のチェックを行う
     if (!this.entitySystems.get(entity)!.has(system)) {
       for (const systemComponentTypes of system["componentTypes"]) {
+        console.log("@systemComponentTypes", systemComponentTypes);
         // 全てのエンティティを精査するシステムの場合
         if (systemComponentTypes === Component.ALL_COMPONENT_TYPES) {
           this.entitySystems.get(entity)!.add(system);
