@@ -40,11 +40,8 @@ export class RenderingSystem extends System {
   afterUpdateAll(_entities: Entity[]) {
     // 自前で順番を管理するために entities は使わない
     for (const entity of this.orderedEntities) {
-      if (entity instanceof SimpleBoxEntity) {
-        this.renderBox(entity);
-      } else if (entity instanceof ImageEntity) {
-        this.renderImage(entity);
-      }
+      this.renderBox(entity);
+      this.renderImage(entity);
     }
   }
 
@@ -53,29 +50,28 @@ export class RenderingSystem extends System {
 
     this.ctx.lineWidth = 1;
 
-    const [boxComponent] = BoxComponent.get(entity);
+    const boxComponents = BoxComponent.get(entity);
     const [colorComponent] = ColorComponent.get(entity);
 
-    if (boxComponent == null) return;
+    for (const boxComponent of boxComponents) {
+      this.ctx.beginPath();
+      this.ctx.rect(
+        ...boxComponent.data.position.destruct(),
+        ...boxComponent.data.size.destruct()
+      );
 
-    this.ctx.beginPath();
-    this.ctx.rect(
-      ...boxComponent.data.position.destruct(),
-      ...boxComponent.data.size.destruct()
-    );
-
-    if (colorComponent != null) {
-      if (colorComponent.data.fill) {
-        this.ctx.fillStyle = colorComponent.data.fill;
-        this.ctx.fill();
+      if (colorComponent != null) {
+        if (colorComponent.data.fill) {
+          this.ctx.fillStyle = colorComponent.data.fill;
+          this.ctx.fill();
+        }
+        if (colorComponent.data.stroke) {
+          this.ctx.strokeStyle = colorComponent.data.stroke;
+          this.ctx.stroke();
+        }
       }
-      if (colorComponent.data.stroke) {
-        this.ctx.strokeStyle = colorComponent.data.stroke;
-        this.ctx.stroke();
-      }
+      this.ctx.closePath();
     }
-
-    this.ctx.closePath();
 
     this.ctx.restore();
   }

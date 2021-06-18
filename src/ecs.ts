@@ -112,7 +112,6 @@ export class ECS {
     // まだリレーション登録されていないならリレーション登録のチェックを行う
     if (!this.entitySystems.get(entity)!.has(system)) {
       for (const systemComponentTypes of system["componentTypes"]) {
-        console.log("@systemComponentTypes", systemComponentTypes);
         // 全てのエンティティを精査するシステムの場合
         if (systemComponentTypes === Component.ALL_COMPONENT_TYPES) {
           this.entitySystems.get(entity)!.add(system);
