@@ -7,9 +7,15 @@ import { Vector } from "../Vector";
 import { HitBoxComponent, HitBoxData } from "../components/HitBoxComponent";
 import { Entity } from "../ecs";
 import {
+  CONTROL_SIZE,
+  getControlPositions,
   ResizableComponent,
   ResizableData,
 } from "../components/ResizableComponent";
+import {
+  ControlBoxComponent,
+  ControlBoxData,
+} from "../components/ControlBoxComponent";
 
 export class ImageEntity extends Entity {
   constructor(
@@ -41,5 +47,8 @@ export class ImageEntity extends Entity {
     this.add(hitBoxComponent);
     this.add(new DraggableComponent(option));
     this.add(resizableComponent);
+    for (const [type, position] of getControlPositions(option)) {
+      this.add(new ControlBoxComponent({ type, position, size: CONTROL_SIZE }));
+    }
   }
 }

@@ -5,6 +5,7 @@ import { checkBoxHit } from "../utils";
 import { DragState } from "../states/DragState";
 import { HitBoxComponent } from "../components/HitBoxComponent";
 import { Entity, System } from "../ecs";
+import { ControlBoxComponent } from "../components/ControlBoxComponent";
 
 export class DragSystem extends System {
   constructor(
@@ -12,11 +13,15 @@ export class DragSystem extends System {
     private dragState: DragState,
     private mouseState: MouseState
   ) {
-    super([[HitBoxComponent.type, DraggableComponent.type]]);
+    super([
+      [HitBoxComponent.type, DraggableComponent.type],
+      [ControlBoxComponent.type],
+    ]);
   }
 
   update(entity: Entity) {}
 
+  // 自前で順番を管理するために entities は使わない
   afterUpdateAll(_entities: Entity[]) {
     if (this.mouseState.draggingOrigin == null) {
       this.dragState.dragTarget = null;
@@ -29,12 +34,12 @@ export class DragSystem extends System {
       if (this.dragState.dragTarget) {
         dragTarget = this.dragState.dragTarget;
       } else {
-        // 自前で順番を管理するために entities は使わない
-        // 前面のものを優先するため一旦反転する
+        // 前面のものの衝突判定を先に行うために一旦反転する
         this.renderingSystem.orderedEntities.reverse();
         dragTarget =
           this.renderingSystem.orderedEntities.find((entity) => {
             const [draggableComponent] = DraggableComponent.get(entity);
+            console.log("@draggableComponent", draggableComponent);
             if (
               draggableComponent == null ||
               !draggableComponent.data.draggable
@@ -56,21 +61,25 @@ export class DragSystem extends System {
 
       if (dragTarget) {
         const [boxHitComponent] = HitBoxComponent.get(dragTarget);
-        if (boxHitComponent == null) return;
+        const controlBoxComponents = ControlBoxComponent.get(dragTarget);
 
-        boxHitComponent.data.position = boxHitComponent.data.position.add(
-          this.mouseState.position.sub(this.mouseState.draggingOrigin)
-        );
-        this.mouseState.draggingOrigin = this.mouseState.position;
+        if (boxHitComponent) {
+          boxHitComponent.data.position = boxHitComponent.data.position.add(
+            this.mouseState.position.sub(this.mouseState.draggingOrigin)
+          );
+          this.mouseState.draggingOrigin = this.mouseState.position;
 
-        // 触ったものを前面に移動する
-        this.renderingSystem.orderedEntities =
-          this.renderingSystem.orderedEntities
-            .filter((e) => e.id !== dragTarget!.id)
-            .concat([dragTarget]);
+          // 触ったものを前面に移動する
+          this.renderingSystem.orderedEntities =
+            this.renderingSystem.orderedEntities
+              .filter((e) => e.id !== dragTarget!.id)
+              .concat([dragTarget]);
 
-        // ドラッグ状態を継続するために最後にドラッグ移動したものを記録しておく
-        this.dragState.dragTarget = dragTarget;
+          // ドラッグ状態を継続するために最後にドラッグ移動したものを記録しておく
+          this.dragState.dragTarget = dragTarget;
+        } else if (controlBoxComponents.length > 0) {
+          console.log("@controlBoxComponents", controlBoxComponents);
+        }
       }
     }
   }

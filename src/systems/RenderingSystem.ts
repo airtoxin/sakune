@@ -1,17 +1,9 @@
-import { SimpleBoxEntity } from "../entities/SimpleBoxEntity";
-import { ImageEntity } from "../entities/ImageEntity";
 import { HitBoxComponent } from "../components/HitBoxComponent";
 import { ColorComponent } from "../components/ColorComponent";
 import { ImageComponent } from "../components/ImageComponent";
 import { Entity, System } from "../ecs";
 import { BoxComponent } from "../components/BoxComponent";
-import {
-  BOUNDING_BOX_CONTROL_POSITION,
-  CONTROL_SIZE,
-  HALF_CONTROL_SIZE,
-  ResizableComponent,
-} from "../components/ResizableComponent";
-import { Vector } from "../Vector";
+import { ControlBoxComponent } from "../components/ControlBoxComponent";
 
 export class RenderingSystem extends System {
   // 先の要素から先にレンダリングされる = 背面にある
@@ -24,7 +16,7 @@ export class RenderingSystem extends System {
     super([
       [BoxComponent.type, ColorComponent.type],
       [HitBoxComponent.type, ImageComponent.type],
-      [HitBoxComponent.type, ResizableComponent.type],
+      [ControlBoxComponent.type],
     ]);
     this.canvas.style.border = "solid";
   }
@@ -86,42 +78,18 @@ export class RenderingSystem extends System {
   }
 
   private renderBoundingBox(entity: Entity) {
-    for (const [name, position] of this.getBoundingBoxControlPositions(
-      entity
-    ).entries()) {
+    const controlBoxes = ControlBoxComponent.get(entity);
+
+    if (controlBoxes == null) return;
+
+    for (const {
+      data: { type, position, size },
+    } of controlBoxes) {
       this.ctx.save();
       this.ctx.lineWidth = 1;
-      this.ctx.strokeRect(...position.destruct(), ...CONTROL_SIZE.destruct());
+      this.ctx.strokeRect(...position.destruct(), ...size.destruct());
       this.ctx.restore();
     }
-  }
-
-  private getBoundingBoxControlPositions(entity: Entity) {
-    const [hitBoxComponent] = HitBoxComponent.get(entity);
-    const [resizableComponent] = ResizableComponent.get(entity);
-
-    const empty = new Map<BOUNDING_BOX_CONTROL_POSITION, Vector>();
-    if (hitBoxComponent == null || resizableComponent == null) return empty;
-    if (!resizableComponent.data.resizable) return empty;
-
-    const x = Vector.createX(hitBoxComponent.data.size.x);
-    const y = Vector.createY(hitBoxComponent.data.size.y);
-    const halfX = x.div(2);
-    const halfY = y.div(2);
-    const origin = hitBoxComponent.data.position.sub(HALF_CONTROL_SIZE);
-    const rightTop = origin.add(x);
-    const leftBottom = origin.add(y);
-
-    return new Map<BOUNDING_BOX_CONTROL_POSITION, Vector>([
-      ["left-top", origin],
-      ["top", origin.add(halfX)],
-      ["right-top", rightTop],
-      ["right", rightTop.add(halfY)],
-      ["left", origin.add(halfY)],
-      ["left-bottom", leftBottom],
-      ["bottom", leftBottom.add(halfX)],
-      ["right-bottom", origin.add(hitBoxComponent.data.size)],
-    ]);
   }
 
   private renderImage(entity: Entity) {
