@@ -11,7 +11,7 @@ export class MouseState {
     canvas.addEventListener("mousemove", (event) => {
       this.position = new Vector(event.offsetX, event.offsetY);
     });
-    canvas.addEventListener("mouseup", () => {
+    document.addEventListener("mouseup", () => {
       this.draggingOrigin = null;
     });
     canvas.addEventListener("mouseleave", () => {
