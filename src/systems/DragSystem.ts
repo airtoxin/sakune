@@ -147,37 +147,47 @@ export class DragSystem extends System {
 
     if (["left-top", "top", "right-top"].includes(target.data.type)) {
       hitBoxComponent.data.position = hitBoxComponent.data.position.add(diffY);
-      target.data.position = target.data.position.add(diffY);
-      // TODO: おかしい
+      hitBoxComponent.data.size = hitBoxComponent.data.size.sub(diffY);
       for (const cmp of components) {
         if (["left-top", "top", "right-top"].includes(cmp.data.type)) {
           cmp.data.position = cmp.data.position.add(diffY);
+        }
+        if (["left", "right"].includes(cmp.data.type)) {
+          cmp.data.position = cmp.data.position.add(diffY.div(2));
         }
       }
     }
     if (["left-bottom", "bottom", "right-bottom"].includes(target.data.type)) {
       hitBoxComponent.data.size = hitBoxComponent.data.size.add(diffY);
-      target.data.position = target.data.position.add(diffY);
       for (const cmp of components) {
         if (["left-bottom", "bottom", "right-bottom"].includes(cmp.data.type)) {
           cmp.data.position = cmp.data.position.add(diffY);
+        }
+        if (["left", "right"].includes(cmp.data.type)) {
+          cmp.data.position = cmp.data.position.add(diffY.div(2));
         }
       }
     }
     if (["left-top", "left", "left-bottom"].includes(target.data.type)) {
       hitBoxComponent.data.position = hitBoxComponent.data.position.add(diffX);
-      target.data.position = target.data.position.add(diffX);
+      hitBoxComponent.data.size = hitBoxComponent.data.size.sub(diffX);
       for (const cmp of components) {
-        if (["left-bottom", "bottom", "right-bottom"].includes(cmp.data.type)) {
+        if (["left-top", "left", "left-bottom"].includes(cmp.data.type)) {
           cmp.data.position = cmp.data.position.add(diffX);
+        }
+        if (["top", "bottom"].includes(cmp.data.type)) {
+          cmp.data.position = cmp.data.position.add(diffX.div(2));
         }
       }
     }
     if (["right-top", "right", "right-bottom"].includes(target.data.type)) {
       hitBoxComponent.data.size = hitBoxComponent.data.size.add(diffX);
       for (const cmp of components) {
-        if (["left-bottom", "bottom", "right-bottom"].includes(cmp.data.type)) {
+        if (["right-top", "right", "right-bottom"].includes(cmp.data.type)) {
           cmp.data.position = cmp.data.position.add(diffX);
+        }
+        if (["top", "bottom"].includes(cmp.data.type)) {
+          cmp.data.position = cmp.data.position.add(diffX.div(2));
         }
       }
     }
