@@ -1,6 +1,6 @@
-import { Component, Entity } from "../ecs";
+import { Component } from "../ecs";
 import { Vector } from "../Vector";
-import { HitBoxComponent, HitBoxData } from "./HitBoxComponent";
+import { HitBoxData } from "./HitBoxComponent";
 
 export const CONTROL_SIZE = new Vector(10, 10);
 export const HALF_CONTROL_SIZE = CONTROL_SIZE.div(2);

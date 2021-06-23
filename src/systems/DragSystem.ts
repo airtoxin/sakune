@@ -39,7 +39,7 @@ export class DragSystem extends System {
         dragTarget = this.dragState.dragTarget;
       } else {
         // 前面のものの衝突判定を先に行うために一旦反転する
-        this.renderingSystem.orderedEntities.reverse();
+        // this.renderingSystem.orderedEntities.reverse();
         for (const entity of this.renderingSystem.orderedEntities) {
           const [draggableComponent] = DraggableComponent.get(entity);
           if (draggableComponent == null || !draggableComponent.data.draggable)
@@ -82,7 +82,7 @@ export class DragSystem extends System {
           }
         }
         // 反転を戻す
-        this.renderingSystem.orderedEntities.reverse();
+        // this.renderingSystem.orderedEntities.reverse();
       }
 
       if (dragTarget) {
