@@ -112,10 +112,19 @@ export class DragSystem extends System {
     )
       return;
 
-    hitBoxComponent.data.position = hitBoxComponent.data.position.add(
-      this.mouseState.position.sub(this.mouseState.draggingOrigin)
+    const mouseDiff = this.mouseState.position.sub(
+      this.mouseState.draggingOrigin
     );
+
+    hitBoxComponent.data.position =
+      hitBoxComponent.data.position.add(mouseDiff);
     this.mouseState.draggingOrigin = this.mouseState.position;
+
+    const controlBoxComponents = ControlBoxComponent.get(entity);
+    for (const controlBoxComponent of controlBoxComponents) {
+      controlBoxComponent.data.position =
+        controlBoxComponent.data.position.add(mouseDiff);
+    }
 
     // 触ったものを前面に移動する
     this.renderingSystem.orderedEntities = this.renderingSystem.orderedEntities
