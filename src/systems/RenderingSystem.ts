@@ -4,6 +4,7 @@ import { ImageComponent } from "../components/ImageComponent";
 import { Entity, System } from "../ecs";
 import { BoxComponent } from "../components/BoxComponent";
 import { ControlBoxComponent } from "../components/ControlBoxComponent";
+import { ResizableComponent } from "../components/ResizableComponent";
 
 export class RenderingSystem extends System {
   // 先の要素から先にレンダリングされる = 背面にある
@@ -78,9 +79,11 @@ export class RenderingSystem extends System {
   }
 
   private renderBoundingBox(entity: Entity) {
+    const [resizable] = ResizableComponent.get(entity);
     const controlBoxes = ControlBoxComponent.get(entity);
 
-    if (controlBoxes == null) return;
+    if (controlBoxes == null || resizable == null || !resizable.data.resizable)
+      return;
 
     for (const {
       data: { type, position, size },

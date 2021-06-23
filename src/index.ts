@@ -24,7 +24,7 @@ const imageEntity = new ImageEntity({
   position: new Vector(10, 10),
   size: new Vector(300, 300),
   draggable: true,
-  resizable: true,
+  resizable: false,
 });
 world.addEntity(imageEntity);
 world.addEntity(
