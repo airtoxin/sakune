@@ -5,6 +5,7 @@ import { Entity, System } from "../ecs";
 import { BoxComponent } from "../components/BoxComponent";
 import { ControlBoxComponent } from "../components/ControlBoxComponent";
 import { ResizableComponent } from "../components/ResizableComponent";
+import { CircleComponent } from "../components/CircleComponent";
 
 export class RenderingSystem extends System {
   // 先の要素から先にレンダリングされる = 背面にある
@@ -16,6 +17,7 @@ export class RenderingSystem extends System {
   ) {
     super([
       [BoxComponent.type, ColorComponent.type],
+      [CircleComponent.type, ColorComponent.type],
       [HitBoxComponent.type, ImageComponent.type],
       [ControlBoxComponent.type],
     ]);
@@ -42,6 +44,7 @@ export class RenderingSystem extends System {
     // 自前で順番を管理するために entities は使わない
     for (const entity of this.orderedEntities) {
       this.renderBox(entity);
+      this.renderCircle(entity);
       this.renderImage(entity);
       this.renderBoundingBox(entity);
     }
@@ -60,6 +63,40 @@ export class RenderingSystem extends System {
       this.ctx.rect(
         ...boxComponent.data.position.destruct(),
         ...boxComponent.data.size.destruct()
+      );
+
+      if (colorComponent != null) {
+        if (colorComponent.data.fill) {
+          this.ctx.fillStyle = colorComponent.data.fill;
+          this.ctx.fill();
+        }
+        if (colorComponent.data.stroke) {
+          this.ctx.strokeStyle = colorComponent.data.stroke;
+          this.ctx.stroke();
+        }
+      }
+      this.ctx.closePath();
+    }
+
+    this.ctx.restore();
+  }
+
+  private renderCircle(entity: Entity) {
+    this.ctx.save();
+    this.ctx.lineWidth = 1;
+
+    const circleComponents = CircleComponent.get(entity);
+    const [colorComponent] = ColorComponent.get(entity);
+
+    for (const circleComponent of circleComponents) {
+      this.ctx.beginPath();
+      this.ctx.ellipse(
+        ...circleComponent.data.center.destruct(),
+        circleComponent.data.radius,
+        circleComponent.data.radius,
+        0,
+        0,
+        Math.PI * 2
       );
 
       if (colorComponent != null) {
