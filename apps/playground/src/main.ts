@@ -120,6 +120,10 @@ if (!canvas || !log) {
 const sakune = createSakune<Meta>({ canvas });
 sakune.resize(800, 480);
 
+function strokeFor(color: string): string {
+  return color === "#1f1f1f" ? "#8a8a8a" : "#1f1f1f";
+}
+
 function pieceStackItem(piece: StackPiece): {
   id: string;
   size: { width: number; height: number };
@@ -130,7 +134,11 @@ function pieceStackItem(piece: StackPiece): {
   return {
     id: piece.id,
     size: { width: PIECE_WIDTH, height: PIECE_HEIGHT },
-    visual: { type: "cylinder", fill: piece.color, stroke: "#1f1f1f" },
+    visual: {
+      type: "cylinder",
+      fill: piece.color,
+      stroke: strokeFor(piece.color),
+    },
     hitArea: { type: "rect" },
     meta: { type: "piece", pieceId: piece.id },
   };
@@ -175,6 +183,7 @@ function buildScene(): SakuneScene<Meta> {
           meta: { type: "card" as const, cardId: entity.id },
         };
       }
+      const fill = entity.id === "piece-black" ? "#1f1f1f" : "#fafafa";
       return {
         type: "entity" as const,
         id: entity.id,
@@ -183,8 +192,8 @@ function buildScene(): SakuneScene<Meta> {
         size: { width: PIECE_WIDTH, height: PIECE_HEIGHT },
         visual: {
           type: "cylinder" as const,
-          fill: entity.id === "piece-black" ? "#1f1f1f" : "#fafafa",
-          stroke: "#1f1f1f",
+          fill,
+          stroke: strokeFor(fill),
         },
         hitArea: { type: "rect" as const },
         draggable: true,
