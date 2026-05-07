@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sakune Playground</title>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Sakune Playground</h1>
+        <p>カードとピースをクリック／ドラッグして遊んでください。</p>
+      </header>
+      <div class="board-wrap">
+        <canvas id="board"></canvas>
+      </div>
+      <aside>
+        <h2>Last event</h2>
+        <pre id="log">—</pre>
+        <h2>Items</h2>
+        <ul>
+          <li>左の山札は表示のみ（4 枚積み）</li>
+          <li>右上のカード 3 枚はドラッグで移動</li>
+          <li>下のピース 2 個は円形ヒット領域</li>
+        </ul>
+      </aside>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
