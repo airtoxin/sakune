@@ -33,8 +33,9 @@ type PieceStack = {
   pieces: StackPiece[];
 };
 
-const PIECE_STACK_OFFSET_Y = -32;
-const PIECE_SIZE = 48;
+const PIECE_WIDTH = 56;
+const PIECE_HEIGHT = 28;
+const PIECE_STACK_OFFSET_Y = -16;
 
 const deck: Deck = {
   id: "deck",
@@ -122,15 +123,15 @@ sakune.resize(800, 480);
 function pieceStackItem(piece: StackPiece): {
   id: string;
   size: { width: number; height: number };
-  visual: { type: "circle"; fill: string; stroke: string };
-  hitArea: { type: "circle" };
+  visual: { type: "cylinder"; fill: string; stroke: string };
+  hitArea: { type: "rect" };
   meta: Meta;
 } {
   return {
     id: piece.id,
-    size: { width: PIECE_SIZE, height: PIECE_SIZE },
-    visual: { type: "circle", fill: piece.color, stroke: "#1f1f1f" },
-    hitArea: { type: "circle" },
+    size: { width: PIECE_WIDTH, height: PIECE_HEIGHT },
+    visual: { type: "cylinder", fill: piece.color, stroke: "#1f1f1f" },
+    hitArea: { type: "rect" },
     meta: { type: "piece", pieceId: piece.id },
   };
 }
@@ -179,13 +180,13 @@ function buildScene(): SakuneScene<Meta> {
         id: entity.id,
         x: entity.x,
         y: entity.y,
-        size: { width: 56, height: 56 },
+        size: { width: PIECE_WIDTH, height: PIECE_HEIGHT },
         visual: {
-          type: "circle" as const,
+          type: "cylinder" as const,
           fill: entity.id === "piece-black" ? "#1f1f1f" : "#fafafa",
           stroke: "#1f1f1f",
         },
-        hitArea: { type: "circle" as const },
+        hitArea: { type: "rect" as const },
         draggable: true,
         meta: { type: "piece" as const, pieceId: entity.id },
       };

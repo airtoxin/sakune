@@ -21,6 +21,11 @@ export type Visual =
       stroke?: string;
     }
   | {
+      type: "cylinder";
+      fill?: string;
+      stroke?: string;
+    }
+  | {
       type: "text";
       text: string;
       font?: string;

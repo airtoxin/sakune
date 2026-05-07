@@ -16,6 +16,11 @@ export function drawDrawable<TMeta>(
     return;
   }
 
+  if (visual.type === "cylinder") {
+    drawCylinder(ctx, x, y, size.width, size.height, visual);
+    return;
+  }
+
   drawText(ctx, x, y, visual);
 }
 
@@ -63,6 +68,63 @@ function drawCircle(
   }
   if (visual.stroke !== undefined) {
     ctx.strokeStyle = visual.stroke;
+    ctx.stroke();
+  }
+}
+
+function drawCylinder(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  visual: Extract<Visual, { type: "cylinder" }>,
+): void {
+  const rx = width / 2;
+  const ry = Math.min(width * 0.18, height * 0.45);
+  const cx = x + rx;
+  const topCy = y + ry;
+  const bottomCy = y + height - ry;
+
+  if (typeof ctx.ellipse !== "function") {
+    drawCircle(ctx, x, y, width, height, {
+      type: "circle",
+      fill: visual.fill,
+      stroke: visual.stroke,
+    });
+    return;
+  }
+
+  const tracePath = (): void => {
+    ctx.beginPath();
+    ctx.moveTo(cx + rx, topCy);
+    ctx.lineTo(cx + rx, bottomCy);
+    ctx.ellipse(cx, bottomCy, rx, ry, 0, 0, Math.PI, false);
+    ctx.lineTo(cx - rx, topCy);
+    ctx.ellipse(cx, topCy, rx, ry, 0, Math.PI, 2 * Math.PI, false);
+    ctx.closePath();
+  };
+
+  if (visual.fill !== undefined) {
+    tracePath();
+    ctx.save();
+    ctx.fillStyle = visual.fill;
+    ctx.filter = "brightness(0.82)";
+    ctx.fill();
+    ctx.restore();
+
+    ctx.beginPath();
+    ctx.ellipse(cx, topCy, rx, ry, 0, 0, 2 * Math.PI, false);
+    ctx.fillStyle = visual.fill;
+    ctx.fill();
+  }
+
+  if (visual.stroke !== undefined) {
+    tracePath();
+    ctx.strokeStyle = visual.stroke;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(cx, topCy, rx, ry, 0, 0, Math.PI, false);
     ctx.stroke();
   }
 }
