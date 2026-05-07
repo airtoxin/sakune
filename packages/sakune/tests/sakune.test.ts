@@ -556,6 +556,35 @@ test("click without drag does not change render order", () => {
   expect(ctx.calls.filter((c) => c.method === "rect").map((c) => c.args[0])).toEqual([]);
 });
 
+test("hitTest accepts an excludeId option", () => {
+  const { canvas } = createMockCanvas();
+  const sakune = createSakune({ canvas, pixelRatio: 1 });
+
+  sakune.setScene({
+    items: [
+      {
+        type: "entity",
+        id: "back",
+        x: 0,
+        y: 0,
+        size: { width: 100, height: 100 },
+        visual: { type: "rect" },
+      },
+      {
+        type: "entity",
+        id: "front",
+        x: 0,
+        y: 0,
+        size: { width: 100, height: 100 },
+        visual: { type: "rect" },
+      },
+    ],
+  });
+
+  expect(sakune.hitTest({ x: 50, y: 50 })?.id).toBe("front");
+  expect(sakune.hitTest({ x: 50, y: 50 }, { excludeId: "front" })?.id).toBe("back");
+});
+
 test("dragEnd target excludes the dragging item itself", () => {
   const { canvas, fire } = createMockCanvas();
   const sakune = createSakune({ canvas, pixelRatio: 1 });

@@ -4,6 +4,7 @@ import { hitTestDrawables, toHitResult } from "./hitTest.ts";
 import type {
   Drawable,
   HitResult,
+  HitTestOptions,
   Point,
   Sakune,
   SakuneEvent,
@@ -265,8 +266,8 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions): Sakune<TM
       };
     },
 
-    hitTest(point: Point): HitResult<TMeta> | null {
-      return toHitResult(hitTestDrawables(drawables, point));
+    hitTest(point: Point, options?: HitTestOptions): HitResult<TMeta> | null {
+      return toHitResult(hitTestDrawables(drawables, point, options?.excludeId));
     },
   };
 }

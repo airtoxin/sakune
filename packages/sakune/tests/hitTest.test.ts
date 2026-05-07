@@ -39,6 +39,28 @@ test("hitArea defaults to rect when unspecified", () => {
   expect(pointInDrawable(d, { x: 11, y: 5 })).toBe(false);
 });
 
+test("hitTestDrawables skips items matching excludeId", () => {
+  const drawables: Drawable[] = [
+    makeDrawable({
+      id: "back",
+      x: 0,
+      y: 0,
+      size: { width: 100, height: 100 },
+      order: 0,
+    }),
+    makeDrawable({
+      id: "front",
+      x: 0,
+      y: 0,
+      size: { width: 100, height: 100 },
+      order: 1,
+    }),
+  ];
+  expect(hitTestDrawables(drawables, { x: 50, y: 50 })?.id).toBe("front");
+  expect(hitTestDrawables(drawables, { x: 50, y: 50 }, "front")?.id).toBe("back");
+  expect(hitTestDrawables(drawables, { x: 50, y: 50 }, "back")?.id).toBe("front");
+});
+
 test("hitTestDrawables returns the topmost (last-drawn) item", () => {
   const drawables: Drawable[] = [
     makeDrawable({

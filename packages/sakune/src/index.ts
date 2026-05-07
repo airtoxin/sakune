@@ -2,6 +2,7 @@ export { createSakune } from "./sakune.ts";
 export type {
   HitArea,
   HitResult,
+  HitTestOptions,
   Point,
   RenderEntity,
   RenderStack,

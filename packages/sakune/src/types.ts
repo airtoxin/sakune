@@ -112,6 +112,10 @@ export type SakuneOptions = {
   pixelRatio?: number;
 };
 
+export type HitTestOptions = {
+  excludeId?: string;
+};
+
 export type Sakune<TMeta = unknown> = {
   setScene(scene: SakuneScene<TMeta>): void;
   resize(width: number, height: number): void;
@@ -120,7 +124,7 @@ export type Sakune<TMeta = unknown> = {
     type: TType,
     handler: (event: Extract<SakuneEvent<TMeta>, { type: TType }>) => void,
   ): () => void;
-  hitTest(point: Point): HitResult<TMeta> | null;
+  hitTest(point: Point, options?: HitTestOptions): HitResult<TMeta> | null;
 };
 
 export type Drawable<TMeta = unknown> = {

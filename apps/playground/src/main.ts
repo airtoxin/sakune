@@ -3,25 +3,33 @@ import { createSakune, type SakuneScene } from "sakune";
 
 type Meta = { type: "card"; cardId: string } | { type: "piece"; pieceId: string };
 
-type Movable = {
+type EntityKind = "card" | "piece";
+
+type Entity = {
   id: string;
+  kind: EntityKind;
   x: number;
   y: number;
 };
 
-const cards: Movable[] = [
-  { id: "card-A", x: 360, y: 80 },
-  { id: "card-B", x: 460, y: 80 },
-  { id: "card-C", x: 560, y: 80 },
+const entities: Entity[] = [
+  { id: "card-A", kind: "card", x: 360, y: 80 },
+  { id: "card-B", kind: "card", x: 460, y: 80 },
+  { id: "card-C", kind: "card", x: 560, y: 80 },
+  { id: "piece-black", kind: "piece", x: 380, y: 360 },
+  { id: "piece-white", kind: "piece", x: 470, y: 360 },
 ];
 
-const pieces: Movable[] = [
-  { id: "piece-black", x: 380, y: 360 },
-  { id: "piece-white", x: 470, y: 360 },
-];
+function findEntity(id: string): Entity | undefined {
+  return entities.find((entity) => entity.id === id);
+}
 
-const movables = new Map<string, Movable>();
-for (const item of [...cards, ...pieces]) movables.set(item.id, item);
+function moveEntityToTop(id: string): void {
+  const index = entities.findIndex((entity) => entity.id === id);
+  if (index < 0) return;
+  const [entity] = entities.splice(index, 1);
+  if (entity) entities.push(entity);
+}
 
 const canvas = document.querySelector<HTMLCanvasElement>("#board");
 const log = document.querySelector<HTMLPreElement>("#log");
@@ -68,36 +76,40 @@ function buildScene(): SakuneScene<Meta> {
           },
         ],
       },
-      ...cards.map((c) => ({
-        type: "entity" as const,
-        id: c.id,
-        x: c.x,
-        y: c.y,
-        size: { width: 80, height: 112 },
-        visual: {
-          type: "rect" as const,
-          fill: "#fdf6e3",
-          stroke: "#586e75",
-          radius: 8,
-        },
-        draggable: true,
-        meta: { type: "card" as const, cardId: c.id },
-      })),
-      ...pieces.map((p) => ({
-        type: "entity" as const,
-        id: p.id,
-        x: p.x,
-        y: p.y,
-        size: { width: 56, height: 56 },
-        visual: {
-          type: "circle" as const,
-          fill: p.id === "piece-black" ? "#1f1f1f" : "#fafafa",
-          stroke: "#1f1f1f",
-        },
-        hitArea: { type: "circle" as const },
-        draggable: true,
-        meta: { type: "piece" as const, pieceId: p.id },
-      })),
+      ...entities.map((entity) => {
+        if (entity.kind === "card") {
+          return {
+            type: "entity" as const,
+            id: entity.id,
+            x: entity.x,
+            y: entity.y,
+            size: { width: 80, height: 112 },
+            visual: {
+              type: "rect" as const,
+              fill: "#fdf6e3",
+              stroke: "#586e75",
+              radius: 8,
+            },
+            draggable: true,
+            meta: { type: "card" as const, cardId: entity.id },
+          };
+        }
+        return {
+          type: "entity" as const,
+          id: entity.id,
+          x: entity.x,
+          y: entity.y,
+          size: { width: 56, height: 56 },
+          visual: {
+            type: "circle" as const,
+            fill: entity.id === "piece-black" ? "#1f1f1f" : "#fafafa",
+            stroke: "#1f1f1f",
+          },
+          hitArea: { type: "circle" as const },
+          draggable: true,
+          meta: { type: "piece" as const, pieceId: entity.id },
+        };
+      }),
     ],
   };
 }
@@ -105,26 +117,28 @@ function buildScene(): SakuneScene<Meta> {
 let dragOffset: { dx: number; dy: number } | null = null;
 
 sakune.on("dragStart", (event) => {
-  const item = movables.get(event.entityId);
-  if (!item) return;
+  const entity = findEntity(event.entityId);
+  if (!entity) return;
   dragOffset = {
-    dx: event.world.x - item.x,
-    dy: event.world.y - item.y,
+    dx: event.world.x - entity.x,
+    dy: event.world.y - entity.y,
   };
   log.textContent = `dragStart  ${event.entityId}`;
 });
 
 sakune.on("dragMove", (event) => {
   if (!dragOffset) return;
-  const item = movables.get(event.entityId);
-  if (!item) return;
-  item.x = event.world.x - dragOffset.dx;
-  item.y = event.world.y - dragOffset.dy;
+  const entity = findEntity(event.entityId);
+  if (!entity) return;
+  entity.x = event.world.x - dragOffset.dx;
+  entity.y = event.world.y - dragOffset.dy;
   sakune.setScene(buildScene());
 });
 
 sakune.on("dragEnd", (event) => {
   dragOffset = null;
+  moveEntityToTop(event.entityId);
+  sakune.setScene(buildScene());
   log.textContent = `dragEnd    ${event.entityId} → ${event.target?.id ?? "—"}`;
 });
 
