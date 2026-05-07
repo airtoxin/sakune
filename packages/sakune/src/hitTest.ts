@@ -86,6 +86,8 @@ export function isInDragGroup<TMeta>(drawable: Drawable<TMeta>, target: HitResul
     case "stackItem":
       return drawable.id === target.id;
     case "stackSlice":
-      return drawable.stackId === target.stackId && (drawable.stackIndex ?? -1) >= target.fromIndex;
+      if (drawable.stackId === target.stackId && (drawable.stackIndex ?? -1) >= target.fromIndex)
+        return true;
+      return target.items.some((item) => item.id === drawable.id);
   }
 }

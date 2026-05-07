@@ -1,5 +1,5 @@
 import "./style.css";
-import { createSakune, type HitResult, type SakuneScene } from "sakune";
+import { createSakune, type HitResult, type SakuneScene, type SceneItem } from "sakune";
 
 type Meta =
   | { type: "card"; cardId: string }
@@ -24,11 +24,35 @@ type Deck = {
   cards: { id: string }[];
 };
 
+type StackPiece = { id: string; color: string };
+
+type PieceStack = {
+  id: "pieces";
+  x: number;
+  y: number;
+  pieces: StackPiece[];
+};
+
+const PIECE_STACK_OFFSET_Y = -32;
+const PIECE_SIZE = 48;
+
 const deck: Deck = {
   id: "deck",
   x: 80,
   y: 100,
   cards: [{ id: "deck-1" }, { id: "deck-2" }, { id: "deck-3" }, { id: "deck-4" }],
+};
+
+const pieceStack: PieceStack = {
+  id: "pieces",
+  x: 200,
+  y: 320,
+  pieces: [
+    { id: "stk-p1", color: "#1f1f1f" },
+    { id: "stk-p2", color: "#fafafa" },
+    { id: "stk-p3", color: "#1f1f1f" },
+    { id: "stk-p4", color: "#fafafa" },
+  ],
 };
 
 const entities: Entity[] = [
@@ -78,6 +102,14 @@ function describeTarget(target: HitResult<Meta> | null): string {
   }
 }
 
+let activeSlice: {
+  fromIndex: number;
+  x: number;
+  y: number;
+} | null = null;
+
+let dragOffset: { dx: number; dy: number } | null = null;
+
 const canvas = document.querySelector<HTMLCanvasElement>("#board");
 const log = document.querySelector<HTMLPreElement>("#log");
 if (!canvas || !log) {
@@ -87,65 +119,122 @@ if (!canvas || !log) {
 const sakune = createSakune<Meta>({ canvas });
 sakune.resize(800, 480);
 
-function buildScene(): SakuneScene<Meta> {
+function pieceStackItem(piece: StackPiece): {
+  id: string;
+  size: { width: number; height: number };
+  visual: { type: "circle"; fill: string; stroke: string };
+  hitArea: { type: "circle" };
+  meta: Meta;
+} {
   return {
-    items: [
-      {
-        type: "stack",
-        id: deck.id,
-        x: deck.x,
-        y: deck.y,
-        layout: { type: "pile", offset: { x: 0, y: -4 } },
-        dragMode: "stack",
-        meta: { type: "stack", stackId: deck.id },
-        items: deck.cards.map((card) => ({
-          id: card.id,
-          size: { width: 96, height: 132 },
-          visual: { type: "rect", fill: "#fff", stroke: "#333", radius: 10 },
-          meta: { type: "card", cardId: card.id },
-        })),
-      },
-      ...entities.map((entity) => {
-        if (entity.kind === "card") {
-          return {
-            type: "entity" as const,
-            id: entity.id,
-            x: entity.x,
-            y: entity.y,
-            size: { width: 80, height: 112 },
-            visual: {
-              type: "rect" as const,
-              fill: "#fdf6e3",
-              stroke: "#586e75",
-              radius: 8,
-            },
-            draggable: true,
-            meta: { type: "card" as const, cardId: entity.id },
-          };
-        }
+    id: piece.id,
+    size: { width: PIECE_SIZE, height: PIECE_SIZE },
+    visual: { type: "circle", fill: piece.color, stroke: "#1f1f1f" },
+    hitArea: { type: "circle" },
+    meta: { type: "piece", pieceId: piece.id },
+  };
+}
+
+function buildScene(): SakuneScene<Meta> {
+  const sliceFrom = activeSlice?.fromIndex ?? pieceStack.pieces.length;
+  const baseItems = pieceStack.pieces.slice(0, sliceFrom);
+  const sliceItems = activeSlice ? pieceStack.pieces.slice(activeSlice.fromIndex) : [];
+
+  const items: SceneItem<Meta>[] = [
+    {
+      type: "stack",
+      id: deck.id,
+      x: deck.x,
+      y: deck.y,
+      layout: { type: "pile", offset: { x: 0, y: -4 } },
+      dragMode: "stack",
+      meta: { type: "stack", stackId: deck.id },
+      items: deck.cards.map((card) => ({
+        id: card.id,
+        size: { width: 96, height: 132 },
+        visual: { type: "rect", fill: "#fff", stroke: "#333", radius: 10 },
+        meta: { type: "card", cardId: card.id },
+      })),
+    },
+    ...entities.map((entity) => {
+      if (entity.kind === "card") {
         return {
           type: "entity" as const,
           id: entity.id,
           x: entity.x,
           y: entity.y,
-          size: { width: 56, height: 56 },
+          size: { width: 80, height: 112 },
           visual: {
-            type: "circle" as const,
-            fill: entity.id === "piece-black" ? "#1f1f1f" : "#fafafa",
-            stroke: "#1f1f1f",
+            type: "rect" as const,
+            fill: "#fdf6e3",
+            stroke: "#586e75",
+            radius: 8,
           },
-          hitArea: { type: "circle" as const },
           draggable: true,
-          meta: { type: "piece" as const, pieceId: entity.id },
+          meta: { type: "card" as const, cardId: entity.id },
         };
-      }),
-    ],
-  };
+      }
+      return {
+        type: "entity" as const,
+        id: entity.id,
+        x: entity.x,
+        y: entity.y,
+        size: { width: 56, height: 56 },
+        visual: {
+          type: "circle" as const,
+          fill: entity.id === "piece-black" ? "#1f1f1f" : "#fafafa",
+          stroke: "#1f1f1f",
+        },
+        hitArea: { type: "circle" as const },
+        draggable: true,
+        meta: { type: "piece" as const, pieceId: entity.id },
+      };
+    }),
+  ];
+
+  if (baseItems.length > 0) {
+    items.push({
+      type: "stack",
+      id: pieceStack.id,
+      x: pieceStack.x,
+      y: pieceStack.y,
+      layout: { type: "pile", offset: { x: 0, y: PIECE_STACK_OFFSET_Y } },
+      dragMode: "slice-from-item",
+      meta: { type: "stack", stackId: pieceStack.id },
+      items: baseItems.map(pieceStackItem),
+    });
+  }
+
+  if (activeSlice && sliceItems.length > 0) {
+    items.push({
+      type: "stack",
+      id: `${pieceStack.id}-slice`,
+      x: activeSlice.x,
+      y: activeSlice.y,
+      layout: { type: "pile", offset: { x: 0, y: PIECE_STACK_OFFSET_Y } },
+      items: sliceItems.map(pieceStackItem),
+    });
+  }
+
+  return { items };
 }
 
-let dragOffset: { dx: number; dy: number } | null = null;
-
 sakune.on("dragStart", (event) => {
+  log.textContent = `dragStart  ${describeTarget(event.target)}`;
+
+  if (event.target.type === "stackSlice" && event.target.stackId === pieceStack.id) {
+    const fromIndex = event.target.fromIndex;
+    const sliceX = pieceStack.x;
+    const sliceY = pieceStack.y + PIECE_STACK_OFFSET_Y * fromIndex;
+    activeSlice = { fromIndex, x: sliceX, y: sliceY };
+    dragOffset = {
+      dx: event.world.x - sliceX,
+      dy: event.world.y - sliceY,
+    };
+    sakune.setScene(buildScene());
+    return;
+  }
+
   const id = dragEntityId(event.target);
   if (id === null) return;
   const position = getPosition(id);
@@ -154,11 +243,18 @@ sakune.on("dragStart", (event) => {
     dx: event.world.x - position.x,
     dy: event.world.y - position.y,
   };
-  log.textContent = `dragStart  ${describeTarget(event.target)}`;
 });
 
 sakune.on("dragMove", (event) => {
   if (!dragOffset) return;
+
+  if (event.target.type === "stackSlice" && activeSlice) {
+    activeSlice.x = event.world.x - dragOffset.dx;
+    activeSlice.y = event.world.y - dragOffset.dy;
+    sakune.setScene(buildScene());
+    return;
+  }
+
   const id = dragEntityId(event.target);
   if (id === null) return;
   const position = getPosition(id);
@@ -170,10 +266,17 @@ sakune.on("dragMove", (event) => {
 
 sakune.on("dragEnd", (event) => {
   dragOffset = null;
+  log.textContent = `dragEnd    ${describeTarget(event.target)} → ${describeTarget(event.dropTarget)}`;
+
+  if (event.target.type === "stackSlice") {
+    activeSlice = null;
+    sakune.setScene(buildScene());
+    return;
+  }
+
   const id = dragEntityId(event.target);
   if (id !== null && id !== deck.id) moveEntityToTop(id);
   sakune.setScene(buildScene());
-  log.textContent = `dragEnd    ${describeTarget(event.target)} → ${describeTarget(event.dropTarget)}`;
 });
 
 sakune.on("click", (event) => {
