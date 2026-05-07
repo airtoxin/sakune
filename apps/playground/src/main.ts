@@ -34,7 +34,7 @@ type PieceStack = {
 };
 
 const PIECE_WIDTH = 56;
-const PIECE_HEIGHT = 56;
+const PIECE_HEIGHT = 40;
 // Sakune's cylinder uses ry = min(width * 0.18, height * 0.45).
 // Stacking by (H - 2*ry) makes each piece's bottom rim land exactly on
 // the next piece's cap, leaving no visible gap.
