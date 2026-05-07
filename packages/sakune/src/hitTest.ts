@@ -19,9 +19,11 @@ export function pointInDrawable<TMeta>(drawable: Drawable<TMeta>, point: Point):
 export function hitTestDrawables<TMeta>(
   drawables: Drawable<TMeta>[],
   point: Point,
+  excludeId?: string,
 ): Drawable<TMeta> | null {
   for (let i = drawables.length - 1; i >= 0; i--) {
     const drawable = drawables[i] as Drawable<TMeta>;
+    if (drawable.id === excludeId) continue;
     if (pointInDrawable(drawable, point)) return drawable;
   }
   return null;

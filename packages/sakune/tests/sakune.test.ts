@@ -466,3 +466,131 @@ test("destroy detaches listeners and cancels future renders", () => {
   fire("pointerup", { pointerId: 1, clientX: 0, clientY: 0 });
   expect(clicks).toBe(0);
 });
+
+const hoistScene = {
+  items: [
+    {
+      type: "entity" as const,
+      id: "dragged",
+      x: 10,
+      y: 10,
+      size: { width: 50, height: 50 },
+      visual: { type: "rect" as const },
+      draggable: true,
+    },
+    {
+      type: "entity" as const,
+      id: "other",
+      x: 200,
+      y: 10,
+      size: { width: 50, height: 50 },
+      visual: { type: "rect" as const },
+    },
+  ],
+};
+
+test("dragging item is rendered last (on top) during drag", () => {
+  const { canvas, ctx, fire } = createMockCanvas();
+  const sakune = createSakune({ canvas, pixelRatio: 1 });
+
+  sakune.setScene(hoistScene);
+  flushRaf();
+  expect(ctx.calls.filter((c) => c.method === "rect").map((c) => c.args[0])).toEqual([10, 200]);
+
+  ctx.calls.length = 0;
+  fire("pointerdown", { pointerId: 1, clientX: 25, clientY: 25 });
+  fire("pointermove", { pointerId: 1, clientX: 30, clientY: 30 });
+  flushRaf();
+
+  expect(ctx.calls.filter((c) => c.method === "rect").map((c) => c.args[0])).toEqual([200, 10]);
+});
+
+test("dragEnd restores normal render order", () => {
+  const { canvas, ctx, fire } = createMockCanvas();
+  const sakune = createSakune({ canvas, pixelRatio: 1 });
+
+  sakune.setScene(hoistScene);
+  flushRaf();
+
+  fire("pointerdown", { pointerId: 1, clientX: 25, clientY: 25 });
+  fire("pointermove", { pointerId: 1, clientX: 30, clientY: 30 });
+  flushRaf();
+  fire("pointerup", { pointerId: 1, clientX: 30, clientY: 30 });
+
+  ctx.calls.length = 0;
+  flushRaf();
+
+  expect(ctx.calls.filter((c) => c.method === "rect").map((c) => c.args[0])).toEqual([10, 200]);
+});
+
+test("pointercancel restores normal render order", () => {
+  const { canvas, ctx, fire } = createMockCanvas();
+  const sakune = createSakune({ canvas, pixelRatio: 1 });
+
+  sakune.setScene(hoistScene);
+  flushRaf();
+
+  fire("pointerdown", { pointerId: 1, clientX: 25, clientY: 25 });
+  fire("pointermove", { pointerId: 1, clientX: 30, clientY: 30 });
+  flushRaf();
+  fire("pointercancel", { pointerId: 1, clientX: 30, clientY: 30 });
+
+  ctx.calls.length = 0;
+  flushRaf();
+
+  expect(ctx.calls.filter((c) => c.method === "rect").map((c) => c.args[0])).toEqual([10, 200]);
+});
+
+test("click without drag does not change render order", () => {
+  const { canvas, ctx, fire } = createMockCanvas();
+  const sakune = createSakune({ canvas, pixelRatio: 1 });
+
+  sakune.setScene(hoistScene);
+  flushRaf();
+
+  ctx.calls.length = 0;
+  fire("pointerdown", { pointerId: 1, clientX: 25, clientY: 25 });
+  fire("pointerup", { pointerId: 1, clientX: 25, clientY: 25 });
+  flushRaf();
+
+  expect(ctx.calls.filter((c) => c.method === "rect").map((c) => c.args[0])).toEqual([]);
+});
+
+test("dragEnd target excludes the dragging item itself", () => {
+  const { canvas, fire } = createMockCanvas();
+  const sakune = createSakune({ canvas, pixelRatio: 1 });
+
+  sakune.setScene({
+    items: [
+      {
+        type: "entity",
+        id: "back",
+        x: 0,
+        y: 0,
+        size: { width: 200, height: 200 },
+        visual: { type: "rect" },
+      },
+      {
+        type: "entity",
+        id: "front",
+        x: 50,
+        y: 50,
+        size: { width: 100, height: 100 },
+        visual: { type: "rect" },
+        draggable: true,
+      },
+    ],
+  });
+
+  const targets: ({ id: string } | null)[] = [];
+  sakune.on("dragEnd", (event) => {
+    targets.push(event.target);
+  });
+
+  fire("pointerdown", { pointerId: 1, clientX: 100, clientY: 100 });
+  fire("pointermove", { pointerId: 1, clientX: 110, clientY: 110 });
+  fire("pointerup", { pointerId: 1, clientX: 110, clientY: 110 });
+
+  expect(targets).toHaveLength(1);
+  expect(targets[0]?.id).toBe("back");
+});
