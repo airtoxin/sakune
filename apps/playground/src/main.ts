@@ -8,11 +8,8 @@ type Meta =
 
 type Position = { x: number; y: number };
 
-type EntityKind = "card" | "piece";
-
-type Entity = {
+type Card = {
   id: string;
-  kind: EntityKind;
   x: number;
   y: number;
 };
@@ -26,8 +23,8 @@ type Deck = {
 
 type StackPiece = { id: string; color: string };
 
-type PieceStack = {
-  id: "pieces";
+type Pile = {
+  id: string;
   x: number;
   y: number;
   pieces: StackPiece[];
@@ -48,51 +45,76 @@ const deck: Deck = {
   cards: [{ id: "deck-1" }, { id: "deck-2" }, { id: "deck-3" }, { id: "deck-4" }],
 };
 
-const pieceStack: PieceStack = {
-  id: "pieces",
-  x: 200,
-  y: 320,
-  pieces: [
-    { id: "stk-p1", color: "#1f1f1f" },
-    { id: "stk-p2", color: "#fafafa" },
-    { id: "stk-p3", color: "#1f1f1f" },
-    { id: "stk-p4", color: "#fafafa" },
-  ],
-};
-
-const entities: Entity[] = [
-  { id: "card-A", kind: "card", x: 360, y: 80 },
-  { id: "card-B", kind: "card", x: 460, y: 80 },
-  { id: "card-C", kind: "card", x: 560, y: 80 },
-  { id: "piece-black", kind: "piece", x: 380, y: 360 },
-  { id: "piece-white", kind: "piece", x: 470, y: 360 },
+const cards: Card[] = [
+  { id: "card-A", x: 360, y: 80 },
+  { id: "card-B", x: 460, y: 80 },
+  { id: "card-C", x: 560, y: 80 },
 ];
 
-function findEntity(id: string): Entity | undefined {
-  return entities.find((entity) => entity.id === id);
+const piles: Pile[] = [
+  {
+    id: "pile-tower",
+    x: 200,
+    y: 320,
+    pieces: [
+      { id: "stk-p1", color: "#1f1f1f" },
+      { id: "stk-p2", color: "#fafafa" },
+      { id: "stk-p3", color: "#1f1f1f" },
+      { id: "stk-p4", color: "#fafafa" },
+    ],
+  },
+  { id: "pile-A", x: 380, y: 380, pieces: [{ id: "p-A", color: "#1f1f1f" }] },
+  { id: "pile-B", x: 460, y: 380, pieces: [{ id: "p-B", color: "#fafafa" }] },
+  { id: "pile-C", x: 540, y: 380, pieces: [{ id: "p-C", color: "#1f1f1f" }] },
+  { id: "pile-D", x: 620, y: 380, pieces: [{ id: "p-D", color: "#fafafa" }] },
+];
+
+let newPileCounter = 0;
+function newPileId(): string {
+  newPileCounter += 1;
+  return `pile-${newPileCounter}`;
 }
 
-function getPosition(id: string): Position | null {
-  if (id === deck.id) return deck;
-  return findEntity(id) ?? null;
+function findCard(id: string): Card | undefined {
+  return cards.find((card) => card.id === id);
 }
 
-function moveEntityToTop(id: string): void {
-  const index = entities.findIndex((entity) => entity.id === id);
+function moveCardToTop(id: string): void {
+  const index = cards.findIndex((card) => card.id === id);
   if (index < 0) return;
-  const [entity] = entities.splice(index, 1);
-  if (entity) entities.push(entity);
+  const [card] = cards.splice(index, 1);
+  if (card) cards.push(card);
 }
 
-function dragEntityId(target: HitResult<Meta>): string | null {
-  switch (target.type) {
-    case "entity":
-    case "stack":
-    case "stackItem":
-      return target.id;
-    case "stackSlice":
-      return null;
+function findPile(id: string): Pile | undefined {
+  return piles.find((pile) => pile.id === id);
+}
+
+function bringPileToTop(pile: Pile): void {
+  const index = piles.indexOf(pile);
+  if (index < 0 || index === piles.length - 1) return;
+  piles.splice(index, 1);
+  piles.push(pile);
+}
+
+function removeEmptyPiles(): void {
+  for (let i = piles.length - 1; i >= 0; i--) {
+    const pile = piles[i];
+    if (pile && pile.pieces.length === 0) piles.splice(i, 1);
   }
+}
+
+function dropTargetPileId(target: HitResult<Meta> | null): string | null {
+  if (!target) return null;
+  if (target.type === "stack") return target.id;
+  if (target.type === "stackItem") return target.stackId;
+  return null;
+}
+
+function getEntityPosition(target: HitResult<Meta>): Position | null {
+  if (target.type === "entity") return findCard(target.id) ?? null;
+  if (target.type === "stack" && target.id === deck.id) return deck;
+  return null;
 }
 
 function describeTarget(target: HitResult<Meta> | null): string {
@@ -108,7 +130,9 @@ function describeTarget(target: HitResult<Meta> | null): string {
 }
 
 let activeSlice: {
+  sourcePileId: string;
   fromIndex: number;
+  pieces: StackPiece[];
   x: number;
   y: number;
 } | null = null;
@@ -157,10 +181,6 @@ function pieceStackItem(piece: StackPiece): {
 }
 
 function buildScene(): SakuneScene<Meta> {
-  const sliceFrom = activeSlice?.fromIndex ?? pieceStack.pieces.length;
-  const baseItems = pieceStack.pieces.slice(0, sliceFrom);
-  const sliceItems = activeSlice ? pieceStack.pieces.slice(activeSlice.fromIndex) : [];
-
   const items: SceneItem<Meta>[] = [
     {
       type: "stack",
@@ -177,64 +197,53 @@ function buildScene(): SakuneScene<Meta> {
         meta: { type: "card", cardId: card.id },
       })),
     },
-    ...entities.map((entity) => {
-      if (entity.kind === "card") {
-        return {
-          type: "entity" as const,
-          id: entity.id,
-          x: entity.x,
-          y: entity.y,
-          size: { width: 80, height: 112 },
-          visual: {
-            type: "rect" as const,
-            fill: "#fdf6e3",
-            stroke: "#586e75",
-            radius: 8,
-          },
-          draggable: true,
-          meta: { type: "card" as const, cardId: entity.id },
-        };
-      }
-      const fill = entity.id === "piece-black" ? "#1f1f1f" : "#fafafa";
-      return {
-        type: "entity" as const,
-        id: entity.id,
-        x: entity.x,
-        y: entity.y,
-        size: { width: PIECE_WIDTH, height: PIECE_HEIGHT },
-        visual: {
-          type: "cylinder" as const,
-          fill,
-          ...pieceStrokes(fill),
-        },
-        hitArea: { type: "rect" as const },
-        draggable: true,
-        meta: { type: "piece" as const, pieceId: entity.id },
-      };
-    }),
+    ...cards.map((card) => ({
+      type: "entity" as const,
+      id: card.id,
+      x: card.x,
+      y: card.y,
+      size: { width: 80, height: 112 },
+      visual: {
+        type: "rect" as const,
+        fill: "#fdf6e3",
+        stroke: "#586e75",
+        radius: 8,
+      },
+      draggable: true,
+      meta: { type: "card" as const, cardId: card.id },
+    })),
   ];
 
-  if (baseItems.length > 0) {
+  for (const pile of piles) {
+    let pieces = pile.pieces;
+    if (activeSlice && pile.id === activeSlice.sourcePileId) {
+      pieces = pile.pieces.slice(0, activeSlice.fromIndex);
+    }
+    if (pieces.length === 0) continue;
     items.push({
       type: "stack",
-      id: pieceStack.id,
-      x: pieceStack.x,
-      y: pieceStack.y,
+      id: pile.id,
+      x: pile.x,
+      y: pile.y,
       layout: { type: "pile", offset: { x: 0, y: PIECE_STACK_OFFSET_Y } },
       dragMode: "slice-from-item",
-      meta: { type: "stack", stackId: pieceStack.id },
-      items: baseItems.map(pieceStackItem),
+      meta: { type: "stack", stackId: pile.id },
+      items: pieces.map(pieceStackItem),
     });
   }
 
-  if (activeSlice && sliceItems.length > 0) {
+  if (activeSlice) {
     items.push({
       type: "stack",
-      id: `${pieceStack.id}-slice`,
+      id: `${activeSlice.sourcePileId}-slice`,
       x: activeSlice.x,
       y: activeSlice.y,
       layout: { type: "pile", offset: { x: 0, y: PIECE_STACK_OFFSET_Y } },
-      items: sliceItems.map(pieceStackItem),
+      meta: {
+        type: "stack",
+        stackId: `${activeSlice.sourcePileId}-slice`,
+      },
+      items: activeSlice.pieces.map(pieceStackItem),
     });
   }
 
@@ -243,12 +252,22 @@ function buildScene(): SakuneScene<Meta> {
 
 sakune.on("dragStart", (event) => {
   log.textContent = `dragStart  ${describeTarget(event.target)}`;
+  dragOffset = null;
+  activeSlice = null;
 
-  if (event.target.type === "stackSlice" && event.target.stackId === pieceStack.id) {
+  if (event.target.type === "stackSlice") {
+    const sourcePile = findPile(event.target.stackId);
+    if (!sourcePile) return;
     const fromIndex = event.target.fromIndex;
-    const sliceX = pieceStack.x;
-    const sliceY = pieceStack.y + PIECE_STACK_OFFSET_Y * fromIndex;
-    activeSlice = { fromIndex, x: sliceX, y: sliceY };
+    const sliceX = sourcePile.x;
+    const sliceY = sourcePile.y + PIECE_STACK_OFFSET_Y * fromIndex;
+    activeSlice = {
+      sourcePileId: sourcePile.id,
+      fromIndex,
+      pieces: sourcePile.pieces.slice(fromIndex),
+      x: sliceX,
+      y: sliceY,
+    };
     dragOffset = {
       dx: event.world.x - sliceX,
       dy: event.world.y - sliceY,
@@ -257,9 +276,7 @@ sakune.on("dragStart", (event) => {
     return;
   }
 
-  const id = dragEntityId(event.target);
-  if (id === null) return;
-  const position = getPosition(id);
+  const position = getEntityPosition(event.target);
   if (!position) return;
   dragOffset = {
     dx: event.world.x - position.x,
@@ -277,9 +294,7 @@ sakune.on("dragMove", (event) => {
     return;
   }
 
-  const id = dragEntityId(event.target);
-  if (id === null) return;
-  const position = getPosition(id);
+  const position = getEntityPosition(event.target);
   if (!position) return;
   position.x = event.world.x - dragOffset.dx;
   position.y = event.world.y - dragOffset.dy;
@@ -290,14 +305,39 @@ sakune.on("dragEnd", (event) => {
   dragOffset = null;
   log.textContent = `dragEnd    ${describeTarget(event.target)} → ${describeTarget(event.dropTarget)}`;
 
-  if (event.target.type === "stackSlice") {
+  if (event.target.type === "stackSlice" && activeSlice) {
+    const slice = activeSlice;
     activeSlice = null;
+
+    const sourcePile = findPile(slice.sourcePileId);
+    if (sourcePile) {
+      sourcePile.pieces = sourcePile.pieces.slice(0, slice.fromIndex);
+    }
+
+    const targetPileId = dropTargetPileId(event.dropTarget);
+    const targetPile = targetPileId ? findPile(targetPileId) : null;
+
+    if (targetPile) {
+      targetPile.pieces.push(...slice.pieces);
+      bringPileToTop(targetPile);
+    } else {
+      piles.push({
+        id: newPileId(),
+        x: slice.x,
+        y: slice.y,
+        pieces: slice.pieces,
+      });
+    }
+
+    removeEmptyPiles();
     sakune.setScene(buildScene());
     return;
   }
 
-  const id = dragEntityId(event.target);
-  if (id !== null && id !== deck.id) moveEntityToTop(id);
+  if (event.target.type === "entity") {
+    moveCardToTop(event.target.id);
+  }
+
   sakune.setScene(buildScene());
 });
 
