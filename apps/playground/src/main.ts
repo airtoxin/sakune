@@ -124,14 +124,22 @@ if (!canvas || !log) {
 const sakune = createSakune<Meta>({ canvas });
 sakune.resize(800, 480);
 
-function strokeFor(color: string): string {
-  return color === "#1f1f1f" ? "#8a8a8a" : "#1f1f1f";
+function pieceStrokes(color: string): { stroke: string; capStroke: string } {
+  return {
+    stroke: "#1f1f1f",
+    capStroke: color === "#1f1f1f" ? "#8a8a8a" : "#1f1f1f",
+  };
 }
 
 function pieceStackItem(piece: StackPiece): {
   id: string;
   size: { width: number; height: number };
-  visual: { type: "cylinder"; fill: string; stroke: string };
+  visual: {
+    type: "cylinder";
+    fill: string;
+    stroke: string;
+    capStroke: string;
+  };
   hitArea: { type: "rect" };
   meta: Meta;
 } {
@@ -141,7 +149,7 @@ function pieceStackItem(piece: StackPiece): {
     visual: {
       type: "cylinder",
       fill: piece.color,
-      stroke: strokeFor(piece.color),
+      ...pieceStrokes(piece.color),
     },
     hitArea: { type: "rect" },
     meta: { type: "piece", pieceId: piece.id },
@@ -197,7 +205,7 @@ function buildScene(): SakuneScene<Meta> {
         visual: {
           type: "cylinder" as const,
           fill,
-          stroke: strokeFor(fill),
+          ...pieceStrokes(fill),
         },
         hitArea: { type: "rect" as const },
         draggable: true,

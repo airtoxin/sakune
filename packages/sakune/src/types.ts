@@ -24,6 +24,7 @@ export type Visual =
       type: "cylinder";
       fill?: string;
       stroke?: string;
+      capStroke?: string;
     }
   | {
       type: "text";

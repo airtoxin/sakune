@@ -123,8 +123,13 @@ function drawCylinder(
     tracePath();
     ctx.strokeStyle = visual.stroke;
     ctx.stroke();
+  }
+
+  const capStroke = visual.capStroke ?? visual.stroke;
+  if (capStroke !== undefined) {
     ctx.beginPath();
     ctx.ellipse(cx, topCy, rx, ry, 0, 0, Math.PI, false);
+    ctx.strokeStyle = capStroke;
     ctx.stroke();
   }
 }
