@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, test } from "vite-plus/test";
 import { createSakune } from "../src/sakune.ts";
+import type { HitResult } from "../src/types.ts";
 
 type MockCtxCall = { method: string; args: unknown[] };
 
@@ -204,7 +205,7 @@ test("resize updates buffer size, CSS size, and triggers redraw", () => {
   expect(rafQueue).toHaveLength(1);
 });
 
-test("hitTest returns the topmost drawable", () => {
+test("hitTest returns the topmost drawable as an entity result", () => {
   const { canvas } = createMockCanvas();
   const sakune = createSakune({ canvas, pixelRatio: 1 });
 
@@ -229,8 +230,16 @@ test("hitTest returns the topmost drawable", () => {
     ],
   });
 
-  expect(sakune.hitTest({ x: 25, y: 25 })?.id).toBe("front");
-  expect(sakune.hitTest({ x: 5, y: 5 })?.id).toBe("back");
+  expect(sakune.hitTest({ x: 25, y: 25 })).toEqual({
+    type: "entity",
+    id: "front",
+    meta: undefined,
+  });
+  expect(sakune.hitTest({ x: 5, y: 5 })).toEqual({
+    type: "entity",
+    id: "back",
+    meta: undefined,
+  });
   expect(sakune.hitTest({ x: 200, y: 200 })).toBeNull();
 });
 
@@ -253,7 +262,7 @@ test("on returns a cleanup that detaches the handler", () => {
   expect(calls).toBe(1);
 });
 
-test("click event reports the drawable hit at pointerup", () => {
+test("click event reports the entity hit at pointerup", () => {
   type Meta = { kind: "card"; id: string };
   const { canvas, fire } = createMockCanvas();
   const sakune = createSakune<Meta>({ canvas, pixelRatio: 1 });
@@ -272,7 +281,7 @@ test("click event reports the drawable hit at pointerup", () => {
     ],
   });
 
-  const received: ({ id: string; meta?: Meta } | null)[] = [];
+  const received: (HitResult<Meta> | null)[] = [];
   sakune.on("click", (event) => {
     received.push(event.target);
   });
@@ -280,16 +289,20 @@ test("click event reports the drawable hit at pointerup", () => {
   fire("pointerdown", { pointerId: 1, clientX: 10, clientY: 10 });
   fire("pointerup", { pointerId: 1, clientX: 10, clientY: 10 });
 
-  expect(received).toHaveLength(1);
-  expect(received[0]?.id).toBe("card-1");
-  expect(received[0]?.meta?.id).toBe("card-1");
+  expect(received).toEqual([
+    {
+      type: "entity",
+      id: "card-1",
+      meta: { kind: "card", id: "card-1" },
+    },
+  ]);
 });
 
 test("click event reports null target when pressed in empty space", () => {
   const { canvas, fire } = createMockCanvas();
   const sakune = createSakune({ canvas, pixelRatio: 1 });
 
-  const received: unknown[] = [];
+  const received: (HitResult | null)[] = [];
   sakune.on("click", (event) => {
     received.push(event.target);
   });
@@ -332,6 +345,45 @@ test("draggable item: dragStart fires once, then dragMove per move, then dragEnd
   expect(events).toEqual(["dragStart", "dragMove", "dragMove", "dragEnd"]);
 });
 
+test("dragStart / dragMove / dragEnd report the dragged entity as target", () => {
+  type Meta = { kind: "card"; id: string };
+  const { canvas, fire } = createMockCanvas();
+  const sakune = createSakune<Meta>({ canvas, pixelRatio: 1 });
+
+  sakune.setScene({
+    items: [
+      {
+        type: "entity",
+        id: "drag",
+        x: 0,
+        y: 0,
+        size: { width: 100, height: 100 },
+        visual: { type: "rect" },
+        draggable: true,
+        meta: { kind: "card", id: "drag" },
+      },
+    ],
+  });
+
+  const targets: HitResult<Meta>[] = [];
+  sakune.on("dragStart", (event) => targets.push(event.target));
+  sakune.on("dragMove", (event) => targets.push(event.target));
+  sakune.on("dragEnd", (event) => targets.push(event.target));
+
+  fire("pointerdown", { pointerId: 1, clientX: 10, clientY: 10 });
+  fire("pointermove", { pointerId: 1, clientX: 20, clientY: 20 });
+  fire("pointerup", { pointerId: 1, clientX: 20, clientY: 20 });
+
+  for (const target of targets) {
+    expect(target).toEqual({
+      type: "entity",
+      id: "drag",
+      meta: { kind: "card", id: "drag" },
+    });
+  }
+  expect(targets).toHaveLength(3);
+});
+
 test("dragMove delta is per-step difference from previous world position", () => {
   const { canvas, fire } = createMockCanvas();
   const sakune = createSakune({ canvas, pixelRatio: 1 });
@@ -366,7 +418,7 @@ test("dragMove delta is per-step difference from previous world position", () =>
   ]);
 });
 
-test("dragEnd target reflects the drawable hit at pointerup", () => {
+test("dragEnd dropTarget reflects the drawable hit at pointerup", () => {
   const { canvas, fire } = createMockCanvas();
   const sakune = createSakune({ canvas, pixelRatio: 1 });
 
@@ -392,17 +444,16 @@ test("dragEnd target reflects the drawable hit at pointerup", () => {
     ],
   });
 
-  const endTargets: ({ id: string } | null)[] = [];
+  const dropTargets: (HitResult | null)[] = [];
   sakune.on("dragEnd", (event) => {
-    endTargets.push(event.target);
+    dropTargets.push(event.dropTarget);
   });
 
   fire("pointerdown", { pointerId: 1, clientX: 10, clientY: 10 });
   fire("pointermove", { pointerId: 1, clientX: 120, clientY: 120 });
   fire("pointerup", { pointerId: 1, clientX: 120, clientY: 120 });
 
-  expect(endTargets).toHaveLength(1);
-  expect(endTargets[0]?.id).toBe("dst");
+  expect(dropTargets).toEqual([{ type: "entity", id: "dst", meta: undefined }]);
 });
 
 test("non-draggable hit emits click only, never drag events", () => {
@@ -581,11 +632,19 @@ test("hitTest accepts an excludeId option", () => {
     ],
   });
 
-  expect(sakune.hitTest({ x: 50, y: 50 })?.id).toBe("front");
-  expect(sakune.hitTest({ x: 50, y: 50 }, { excludeId: "front" })?.id).toBe("back");
+  expect(sakune.hitTest({ x: 50, y: 50 })).toEqual({
+    type: "entity",
+    id: "front",
+    meta: undefined,
+  });
+  expect(sakune.hitTest({ x: 50, y: 50 }, { excludeId: "front" })).toEqual({
+    type: "entity",
+    id: "back",
+    meta: undefined,
+  });
 });
 
-test("dragging a draggable stack reports the stack id and meta", () => {
+test("dragMode 'stack': events report the stack as target", () => {
   type Meta = { kind: "card"; cardId: string } | { kind: "deck"; deckId: string };
   const { canvas, fire } = createMockCanvas();
   const sakune = createSakune<Meta>({ canvas, pixelRatio: 1 });
@@ -597,7 +656,7 @@ test("dragging a draggable stack reports the stack id and meta", () => {
         id: "deck",
         x: 0,
         y: 0,
-        draggable: true,
+        dragMode: "stack",
         meta: { kind: "deck", deckId: "main" },
         items: [
           {
@@ -617,24 +676,21 @@ test("dragging a draggable stack reports the stack id and meta", () => {
     ],
   });
 
-  const dragStarts: { entityId: string; meta?: Meta }[] = [];
-  const dragEnds: { entityId: string; meta?: Meta }[] = [];
-  sakune.on("dragStart", (event) => {
-    dragStarts.push({ entityId: event.entityId, meta: event.meta });
-  });
-  sakune.on("dragEnd", (event) => {
-    dragEnds.push({ entityId: event.entityId, meta: event.meta });
-  });
+  const targets: HitResult<Meta>[] = [];
+  sakune.on("dragStart", (event) => targets.push(event.target));
+  sakune.on("dragEnd", (event) => targets.push(event.target));
 
   fire("pointerdown", { pointerId: 1, clientX: 10, clientY: 10 });
   fire("pointermove", { pointerId: 1, clientX: 20, clientY: 20 });
   fire("pointerup", { pointerId: 1, clientX: 20, clientY: 20 });
 
-  expect(dragStarts).toEqual([{ entityId: "deck", meta: { kind: "deck", deckId: "main" } }]);
-  expect(dragEnds).toEqual([{ entityId: "deck", meta: { kind: "deck", deckId: "main" } }]);
+  expect(targets).toEqual([
+    { type: "stack", id: "deck", meta: { kind: "deck", deckId: "main" } },
+    { type: "stack", id: "deck", meta: { kind: "deck", deckId: "main" } },
+  ]);
 });
 
-test("hoists every drawable in the dragged stack to the top", () => {
+test("dragMode 'stack': hoists every drawable in the dragged stack", () => {
   const { canvas, ctx, fire } = createMockCanvas();
   const sakune = createSakune({ canvas, pixelRatio: 1 });
 
@@ -645,7 +701,7 @@ test("hoists every drawable in the dragged stack to the top", () => {
         id: "deck",
         x: 0,
         y: 0,
-        draggable: true,
+        dragMode: "stack",
         layout: { type: "pile", offset: { x: 0, y: -4 } },
         items: [
           {
@@ -681,7 +737,7 @@ test("hoists every drawable in the dragged stack to the top", () => {
   expect(ys).toEqual([0, 0, -4]);
 });
 
-test("dragEnd target excludes every member of the dragged stack", () => {
+test("dragMode 'stack': dropTarget excludes every member of the dragged stack", () => {
   const { canvas, fire } = createMockCanvas();
   const sakune = createSakune({ canvas, pixelRatio: 1 });
 
@@ -700,7 +756,7 @@ test("dragEnd target excludes every member of the dragged stack", () => {
         id: "deck",
         x: 50,
         y: 50,
-        draggable: true,
+        dragMode: "stack",
         items: [
           {
             id: "c1",
@@ -717,54 +773,228 @@ test("dragEnd target excludes every member of the dragged stack", () => {
     ],
   });
 
-  const targets: ({ id: string } | null)[] = [];
+  const dropTargets: (HitResult | null)[] = [];
   sakune.on("dragEnd", (event) => {
-    targets.push(event.target);
+    dropTargets.push(event.dropTarget);
   });
 
   fire("pointerdown", { pointerId: 1, clientX: 70, clientY: 70 });
   fire("pointermove", { pointerId: 1, clientX: 80, clientY: 80 });
   fire("pointerup", { pointerId: 1, clientX: 80, clientY: 80 });
 
-  expect(targets).toHaveLength(1);
-  expect(targets[0]?.id).toBe("zone");
+  expect(dropTargets[0]).toEqual({
+    type: "entity",
+    id: "zone",
+    meta: undefined,
+  });
 });
 
-test("dragEnd target excludes the dragging item itself", () => {
+test("dragMode 'item': events report a single stackItem target", () => {
+  type Meta = { kind: "card"; cardId: string };
   const { canvas, fire } = createMockCanvas();
+  const sakune = createSakune<Meta>({ canvas, pixelRatio: 1 });
+
+  sakune.setScene({
+    items: [
+      {
+        type: "stack",
+        id: "hand",
+        x: 0,
+        y: 0,
+        dragMode: "item",
+        layout: { type: "pile", offset: { x: 0, y: -120 } },
+        items: [
+          {
+            id: "c0",
+            size: { width: 80, height: 100 },
+            visual: { type: "rect" },
+            meta: { kind: "card", cardId: "c0" },
+          },
+          {
+            id: "c1",
+            size: { width: 80, height: 100 },
+            visual: { type: "rect" },
+            meta: { kind: "card", cardId: "c1" },
+          },
+          {
+            id: "c2",
+            size: { width: 80, height: 100 },
+            visual: { type: "rect" },
+            meta: { kind: "card", cardId: "c2" },
+          },
+        ],
+      },
+    ],
+  });
+
+  const targets: HitResult<Meta>[] = [];
+  sakune.on("dragStart", (event) => targets.push(event.target));
+
+  fire("pointerdown", { pointerId: 1, clientX: 40, clientY: -60 });
+  fire("pointermove", { pointerId: 1, clientX: 50, clientY: -60 });
+
+  expect(targets).toEqual([
+    {
+      type: "stackItem",
+      id: "c1",
+      meta: { kind: "card", cardId: "c1" },
+      stackId: "hand",
+      stackMeta: undefined,
+      index: 1,
+    },
+  ]);
+});
+
+test("dragMode 'item': hoists only the hit item", () => {
+  const { canvas, ctx, fire } = createMockCanvas();
   const sakune = createSakune({ canvas, pixelRatio: 1 });
 
   sakune.setScene({
     items: [
       {
-        type: "entity",
-        id: "back",
+        type: "stack",
+        id: "hand",
         x: 0,
         y: 0,
-        size: { width: 200, height: 200 },
-        visual: { type: "rect" },
+        dragMode: "item",
+        layout: { type: "pile", offset: { x: 0, y: -120 } },
+        items: [
+          {
+            id: "c0",
+            size: { width: 80, height: 100 },
+            visual: { type: "rect" },
+          },
+          {
+            id: "c1",
+            size: { width: 80, height: 100 },
+            visual: { type: "rect" },
+          },
+          {
+            id: "c2",
+            size: { width: 80, height: 100 },
+            visual: { type: "rect" },
+          },
+        ],
       },
+    ],
+  });
+  flushRaf();
+
+  ctx.calls.length = 0;
+  fire("pointerdown", { pointerId: 1, clientX: 40, clientY: -60 });
+  fire("pointermove", { pointerId: 1, clientX: 50, clientY: -60 });
+  flushRaf();
+
+  const ys = ctx.calls.filter((c) => c.method === "rect").map((c) => c.args[1]);
+  expect(ys).toEqual([0, -240, -120]);
+});
+
+test("dragMode 'slice-from-item': target is a stackSlice from the hit index", () => {
+  type Meta = { kind: "card"; cardId: string };
+  const { canvas, fire } = createMockCanvas();
+  const sakune = createSakune<Meta>({ canvas, pixelRatio: 1 });
+
+  sakune.setScene({
+    items: [
       {
-        type: "entity",
-        id: "front",
-        x: 50,
-        y: 50,
-        size: { width: 100, height: 100 },
-        visual: { type: "rect" },
-        draggable: true,
+        type: "stack",
+        id: "tab",
+        x: 0,
+        y: 0,
+        dragMode: "slice-from-item",
+        layout: { type: "pile", offset: { x: 0, y: -120 } },
+        items: [
+          {
+            id: "c0",
+            size: { width: 80, height: 100 },
+            visual: { type: "rect" },
+            meta: { kind: "card", cardId: "c0" },
+          },
+          {
+            id: "c1",
+            size: { width: 80, height: 100 },
+            visual: { type: "rect" },
+            meta: { kind: "card", cardId: "c1" },
+          },
+          {
+            id: "c2",
+            size: { width: 80, height: 100 },
+            visual: { type: "rect" },
+            meta: { kind: "card", cardId: "c2" },
+          },
+        ],
       },
     ],
   });
 
-  const targets: ({ id: string } | null)[] = [];
-  sakune.on("dragEnd", (event) => {
-    targets.push(event.target);
+  const targets: HitResult<Meta>[] = [];
+  sakune.on("dragStart", (event) => targets.push(event.target));
+
+  fire("pointerdown", { pointerId: 1, clientX: 40, clientY: -60 });
+  fire("pointermove", { pointerId: 1, clientX: 50, clientY: -60 });
+
+  expect(targets).toEqual([
+    {
+      type: "stackSlice",
+      stackId: "tab",
+      stackMeta: undefined,
+      fromIndex: 1,
+      items: [
+        { id: "c1", meta: { kind: "card", cardId: "c1" }, index: 1 },
+        { id: "c2", meta: { kind: "card", cardId: "c2" }, index: 2 },
+      ],
+    },
+  ]);
+});
+
+test("dragMode 'slice-from-item': hoists hit item and items above to the top", () => {
+  const { canvas, ctx, fire } = createMockCanvas();
+  const sakune = createSakune({ canvas, pixelRatio: 1 });
+
+  sakune.setScene({
+    items: [
+      {
+        type: "stack",
+        id: "tab",
+        x: 0,
+        y: 0,
+        dragMode: "slice-from-item",
+        layout: { type: "pile", offset: { x: 0, y: -120 } },
+        items: [
+          {
+            id: "c0",
+            size: { width: 80, height: 100 },
+            visual: { type: "rect" },
+          },
+          {
+            id: "c1",
+            size: { width: 80, height: 100 },
+            visual: { type: "rect" },
+          },
+          {
+            id: "c2",
+            size: { width: 80, height: 100 },
+            visual: { type: "rect" },
+          },
+        ],
+      },
+      {
+        type: "entity",
+        id: "other",
+        x: 300,
+        y: 0,
+        size: { width: 50, height: 50 },
+        visual: { type: "rect" },
+      },
+    ],
   });
+  flushRaf();
 
-  fire("pointerdown", { pointerId: 1, clientX: 100, clientY: 100 });
-  fire("pointermove", { pointerId: 1, clientX: 110, clientY: 110 });
-  fire("pointerup", { pointerId: 1, clientX: 110, clientY: 110 });
+  ctx.calls.length = 0;
+  fire("pointerdown", { pointerId: 1, clientX: 40, clientY: -60 });
+  fire("pointermove", { pointerId: 1, clientX: 50, clientY: -60 });
+  flushRaf();
 
-  expect(targets).toHaveLength(1);
-  expect(targets[0]?.id).toBe("back");
+  const ys = ctx.calls.filter((c) => c.method === "rect").map((c) => c.args[1]);
+  expect(ys).toEqual([0, 0, -120, -240]);
 });

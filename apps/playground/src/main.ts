@@ -1,5 +1,5 @@
 import "./style.css";
-import { createSakune, type SakuneScene } from "sakune";
+import { createSakune, type HitResult, type SakuneScene } from "sakune";
 
 type Meta =
   | { type: "card"; cardId: string }
@@ -55,6 +55,29 @@ function moveEntityToTop(id: string): void {
   if (entity) entities.push(entity);
 }
 
+function dragEntityId(target: HitResult<Meta>): string | null {
+  switch (target.type) {
+    case "entity":
+    case "stack":
+    case "stackItem":
+      return target.id;
+    case "stackSlice":
+      return null;
+  }
+}
+
+function describeTarget(target: HitResult<Meta> | null): string {
+  if (target === null) return "—";
+  switch (target.type) {
+    case "entity":
+    case "stack":
+    case "stackItem":
+      return `${target.type}:${target.id}`;
+    case "stackSlice":
+      return `stackSlice:${target.stackId}#${target.fromIndex}`;
+  }
+}
+
 const canvas = document.querySelector<HTMLCanvasElement>("#board");
 const log = document.querySelector<HTMLPreElement>("#log");
 if (!canvas || !log) {
@@ -73,7 +96,7 @@ function buildScene(): SakuneScene<Meta> {
         x: deck.x,
         y: deck.y,
         layout: { type: "pile", offset: { x: 0, y: -4 } },
-        draggable: true,
+        dragMode: "stack",
         meta: { type: "stack", stackId: deck.id },
         items: deck.cards.map((card) => ({
           id: card.id,
@@ -123,18 +146,22 @@ function buildScene(): SakuneScene<Meta> {
 let dragOffset: { dx: number; dy: number } | null = null;
 
 sakune.on("dragStart", (event) => {
-  const position = getPosition(event.entityId);
+  const id = dragEntityId(event.target);
+  if (id === null) return;
+  const position = getPosition(id);
   if (!position) return;
   dragOffset = {
     dx: event.world.x - position.x,
     dy: event.world.y - position.y,
   };
-  log.textContent = `dragStart  ${event.entityId}`;
+  log.textContent = `dragStart  ${describeTarget(event.target)}`;
 });
 
 sakune.on("dragMove", (event) => {
   if (!dragOffset) return;
-  const position = getPosition(event.entityId);
+  const id = dragEntityId(event.target);
+  if (id === null) return;
+  const position = getPosition(id);
   if (!position) return;
   position.x = event.world.x - dragOffset.dx;
   position.y = event.world.y - dragOffset.dy;
@@ -143,13 +170,14 @@ sakune.on("dragMove", (event) => {
 
 sakune.on("dragEnd", (event) => {
   dragOffset = null;
-  if (event.entityId !== deck.id) moveEntityToTop(event.entityId);
+  const id = dragEntityId(event.target);
+  if (id !== null && id !== deck.id) moveEntityToTop(id);
   sakune.setScene(buildScene());
-  log.textContent = `dragEnd    ${event.entityId} → ${event.target?.id ?? "—"}`;
+  log.textContent = `dragEnd    ${describeTarget(event.target)} → ${describeTarget(event.dropTarget)}`;
 });
 
 sakune.on("click", (event) => {
-  log.textContent = `click      ${event.target?.id ?? "(empty)"}`;
+  log.textContent = `click      ${describeTarget(event.target)}`;
 });
 
 sakune.setScene(buildScene());

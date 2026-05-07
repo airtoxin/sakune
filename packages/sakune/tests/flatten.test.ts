@@ -58,9 +58,27 @@ test("flattenScene applies stack offset per index", () => {
   });
 
   expect(drawables).toHaveLength(3);
-  expect(drawables[0]).toMatchObject({ id: "card-1", x: 100, y: 200 });
-  expect(drawables[1]).toMatchObject({ id: "card-2", x: 100, y: 196 });
-  expect(drawables[2]).toMatchObject({ id: "card-3", x: 100, y: 192 });
+  expect(drawables[0]).toMatchObject({
+    id: "card-1",
+    stackId: "deck",
+    stackIndex: 0,
+    x: 100,
+    y: 200,
+  });
+  expect(drawables[1]).toMatchObject({
+    id: "card-2",
+    stackId: "deck",
+    stackIndex: 1,
+    x: 100,
+    y: 196,
+  });
+  expect(drawables[2]).toMatchObject({
+    id: "card-3",
+    stackId: "deck",
+    stackIndex: 2,
+    x: 100,
+    y: 192,
+  });
 });
 
 test("flattenScene defaults stack offset to (0, -4)", () => {
@@ -82,7 +100,7 @@ test("flattenScene defaults stack offset to (0, -4)", () => {
   expect(drawables[1]).toMatchObject({ x: 0, y: -4 });
 });
 
-test("flattenScene marks stack items with groupId when stack is draggable", () => {
+test("flattenScene records dragMode and stack metadata on every stack item", () => {
   type StackMeta = { kind: "deck"; deckId: string };
   const drawables = flattenScene<StackMeta>({
     items: [
@@ -91,7 +109,7 @@ test("flattenScene marks stack items with groupId when stack is draggable", () =
         id: "deck",
         x: 0,
         y: 0,
-        draggable: true,
+        dragMode: "stack",
         meta: { kind: "deck", deckId: "main" },
         items: [
           { id: "c1", size: { width: 10, height: 10 }, visual: { type: "rect" } },
@@ -101,21 +119,17 @@ test("flattenScene marks stack items with groupId when stack is draggable", () =
     ],
   });
 
-  expect(drawables[0]).toMatchObject({
-    id: "c1",
-    groupId: "deck",
-    groupMeta: { kind: "deck", deckId: "main" },
-    draggable: true,
-  });
-  expect(drawables[1]).toMatchObject({
-    id: "c2",
-    groupId: "deck",
-    groupMeta: { kind: "deck", deckId: "main" },
-    draggable: true,
-  });
+  for (const drawable of drawables) {
+    expect(drawable).toMatchObject({
+      stackId: "deck",
+      stackDragMode: "stack",
+      stackMeta: { kind: "deck", deckId: "main" },
+      draggable: true,
+    });
+  }
 });
 
-test("flattenScene leaves stack items unattributed when stack is not draggable", () => {
+test("flattenScene leaves stack items not draggable when dragMode is none", () => {
   const drawables = flattenScene({
     items: [
       {
@@ -124,20 +138,18 @@ test("flattenScene leaves stack items unattributed when stack is not draggable",
         x: 0,
         y: 0,
         items: [
-          {
-            id: "c1",
-            size: { width: 10, height: 10 },
-            visual: { type: "rect" },
-            draggable: true,
-          },
+          { id: "c1", size: { width: 10, height: 10 }, visual: { type: "rect" } },
           { id: "c2", size: { width: 10, height: 10 }, visual: { type: "rect" } },
         ],
       },
     ],
   });
 
-  expect(drawables[0]?.groupId).toBeUndefined();
-  expect(drawables[0]?.draggable).toBe(true);
+  expect(drawables[0]).toMatchObject({
+    stackId: "deck",
+    stackDragMode: "none",
+  });
+  expect(drawables[0]?.draggable).toBeUndefined();
   expect(drawables[1]?.draggable).toBeUndefined();
 });
 

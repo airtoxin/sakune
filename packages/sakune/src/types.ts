@@ -34,6 +34,8 @@ export type StackLayout = {
   offset?: Point;
 };
 
+export type StackDragMode = "none" | "stack" | "item" | "slice-from-item";
+
 export type RenderEntity<TMeta = unknown> = {
   type: "entity";
   id: string;
@@ -51,7 +53,6 @@ export type StackItem<TMeta = unknown> = {
   size: Size;
   visual: Visual;
   hitArea?: HitArea;
-  draggable?: boolean;
   meta?: TMeta;
 };
 
@@ -62,7 +63,7 @@ export type RenderStack<TMeta = unknown> = {
   y: number;
   items: StackItem<TMeta>[];
   layout?: StackLayout;
-  draggable?: boolean;
+  dragMode?: StackDragMode;
   meta?: TMeta;
 };
 
@@ -72,10 +73,36 @@ export type SakuneScene<TMeta = unknown> = {
   items: SceneItem<TMeta>[];
 };
 
-export type HitResult<TMeta = unknown> = {
-  id: string;
-  meta?: TMeta;
-};
+export type HitResult<TMeta = unknown> =
+  | {
+      type: "entity";
+      id: string;
+      meta?: TMeta;
+    }
+  | {
+      type: "stack";
+      id: string;
+      meta?: TMeta;
+    }
+  | {
+      type: "stackItem";
+      id: string;
+      meta?: TMeta;
+      stackId: string;
+      stackMeta?: TMeta;
+      index: number;
+    }
+  | {
+      type: "stackSlice";
+      stackId: string;
+      stackMeta?: TMeta;
+      fromIndex: number;
+      items: {
+        id: string;
+        meta?: TMeta;
+        index: number;
+      }[];
+    };
 
 export type SakuneEvent<TMeta = unknown> =
   | {
@@ -86,26 +113,23 @@ export type SakuneEvent<TMeta = unknown> =
     }
   | {
       type: "dragStart";
-      entityId: string;
       screen: Point;
       world: Point;
-      meta?: TMeta;
+      target: HitResult<TMeta>;
     }
   | {
       type: "dragMove";
-      entityId: string;
       screen: Point;
       world: Point;
       delta: Point;
-      meta?: TMeta;
+      target: HitResult<TMeta>;
     }
   | {
       type: "dragEnd";
-      entityId: string;
       screen: Point;
       world: Point;
-      target: HitResult<TMeta> | null;
-      meta?: TMeta;
+      target: HitResult<TMeta>;
+      dropTarget: HitResult<TMeta> | null;
     };
 
 export type SakuneOptions = {
@@ -130,8 +154,10 @@ export type Sakune<TMeta = unknown> = {
 
 export type Drawable<TMeta = unknown> = {
   id: string;
-  groupId?: string;
-  groupMeta?: TMeta;
+  stackId?: string;
+  stackIndex?: number;
+  stackDragMode?: StackDragMode;
+  stackMeta?: TMeta;
   x: number;
   y: number;
   size: Size;

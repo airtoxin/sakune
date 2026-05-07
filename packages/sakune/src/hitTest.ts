@@ -1,13 +1,5 @@
 import type { Drawable, HitResult, Point } from "./types.ts";
 
-export function effectiveDragId<TMeta>(drawable: Drawable<TMeta>): string {
-  return drawable.groupId ?? drawable.id;
-}
-
-export function effectiveDragMeta<TMeta>(drawable: Drawable<TMeta>): TMeta | undefined {
-  return drawable.groupId !== undefined ? drawable.groupMeta : drawable.meta;
-}
-
 export function pointInDrawable<TMeta>(drawable: Drawable<TMeta>, point: Point): boolean {
   const { x, y, size } = drawable;
   const hitType = drawable.hitArea?.type ?? "rect";
@@ -27,11 +19,11 @@ export function pointInDrawable<TMeta>(drawable: Drawable<TMeta>, point: Point):
 export function hitTestDrawables<TMeta>(
   drawables: Drawable<TMeta>[],
   point: Point,
-  excludeId?: string,
+  exclude?: (drawable: Drawable<TMeta>) => boolean,
 ): Drawable<TMeta> | null {
   for (let i = drawables.length - 1; i >= 0; i--) {
     const drawable = drawables[i] as Drawable<TMeta>;
-    if (excludeId !== undefined && effectiveDragId(drawable) === excludeId) continue;
+    if (exclude !== undefined && exclude(drawable)) continue;
     if (pointInDrawable(drawable, point)) return drawable;
   }
   return null;
@@ -39,8 +31,61 @@ export function hitTestDrawables<TMeta>(
 
 export function toHitResult<TMeta>(drawable: Drawable<TMeta> | null): HitResult<TMeta> | null {
   if (!drawable) return null;
+  if (drawable.stackId === undefined) {
+    return { type: "entity", id: drawable.id, meta: drawable.meta };
+  }
+  if (drawable.stackDragMode === "stack") {
+    return {
+      type: "stack",
+      id: drawable.stackId,
+      meta: drawable.stackMeta,
+    };
+  }
   return {
-    id: effectiveDragId(drawable),
-    meta: effectiveDragMeta(drawable),
+    type: "stackItem",
+    id: drawable.id,
+    meta: drawable.meta,
+    stackId: drawable.stackId,
+    stackMeta: drawable.stackMeta,
+    index: drawable.stackIndex ?? 0,
   };
+}
+
+export function toDragTarget<TMeta>(
+  drawable: Drawable<TMeta> | null,
+  drawables: Drawable<TMeta>[],
+): HitResult<TMeta> | null {
+  if (!drawable) return null;
+  if (drawable.stackDragMode === "slice-from-item" && drawable.stackId !== undefined) {
+    const fromIndex = drawable.stackIndex ?? 0;
+    const sliceItems = drawables
+      .filter((d) => d.stackId === drawable.stackId && (d.stackIndex ?? -1) >= fromIndex)
+      .sort((a, b) => (a.stackIndex ?? 0) - (b.stackIndex ?? 0))
+      .map((d) => ({
+        id: d.id,
+        meta: d.meta,
+        index: d.stackIndex ?? 0,
+      }));
+    return {
+      type: "stackSlice",
+      stackId: drawable.stackId,
+      stackMeta: drawable.stackMeta,
+      fromIndex,
+      items: sliceItems,
+    };
+  }
+  return toHitResult(drawable);
+}
+
+export function isInDragGroup<TMeta>(drawable: Drawable<TMeta>, target: HitResult<TMeta>): boolean {
+  switch (target.type) {
+    case "entity":
+      return drawable.id === target.id;
+    case "stack":
+      return drawable.stackId === target.id;
+    case "stackItem":
+      return drawable.id === target.id;
+    case "stackSlice":
+      return drawable.stackId === target.stackId && (drawable.stackIndex ?? -1) >= target.fromIndex;
+  }
 }

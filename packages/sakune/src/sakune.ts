@@ -1,6 +1,6 @@
 import { drawDrawable } from "./draw.ts";
 import { flattenScene } from "./flatten.ts";
-import { effectiveDragId, effectiveDragMeta, hitTestDrawables, toHitResult } from "./hitTest.ts";
+import { hitTestDrawables, isInDragGroup, toDragTarget, toHitResult } from "./hitTest.ts";
 import type {
   Drawable,
   HitResult,
@@ -18,7 +18,7 @@ type EventListeners<TMeta> = {
 
 type PointerSession<TMeta> = {
   pointerId: number;
-  drawable: Drawable<TMeta> | null;
+  dragTarget: HitResult<TMeta> | null;
   startScreen: Point;
   startWorld: Point;
   lastWorld: Point;
@@ -52,9 +52,9 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions): Sakune<TM
   };
 
   const render = (): void => {
-    const activeDragId =
-      pointerSession !== null && pointerSession.dragStarted && pointerSession.drawable !== null
-        ? effectiveDragId(pointerSession.drawable)
+    const activeTarget =
+      pointerSession !== null && pointerSession.dragStarted && pointerSession.dragTarget !== null
+        ? pointerSession.dragTarget
         : null;
 
     ctx.save();
@@ -62,14 +62,14 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions): Sakune<TM
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.scale(pixelRatio, pixelRatio);
 
-    if (activeDragId === null) {
+    if (activeTarget === null) {
       for (const drawable of drawables) {
         drawDrawable(ctx, drawable);
       }
     } else {
       const hoisted: Drawable<TMeta>[] = [];
       for (const drawable of drawables) {
-        if (effectiveDragId(drawable) === activeDragId) {
+        if (isInDragGroup(drawable, activeTarget)) {
           hoisted.push(drawable);
           continue;
         }
@@ -110,9 +110,10 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions): Sakune<TM
     const screen = screenFromEvent(event);
     const world = screen;
     const hit = hitTestDrawables(drawables, world);
+    const dragTarget = hit && hit.draggable === true ? toDragTarget(hit, drawables) : null;
     pointerSession = {
       pointerId: event.pointerId,
-      drawable: hit && hit.draggable === true ? hit : null,
+      dragTarget,
       startScreen: screen,
       startWorld: world,
       lastWorld: world,
@@ -129,8 +130,8 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions): Sakune<TM
 
   const onPointerMove = (event: PointerEvent): void => {
     if (!pointerSession || pointerSession.pointerId !== event.pointerId) return;
-    const dragTarget = pointerSession.drawable;
-    if (!dragTarget) return;
+    const target = pointerSession.dragTarget;
+    if (target === null) return;
 
     const screen = screenFromEvent(event);
     const world = screen;
@@ -139,17 +140,13 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions): Sakune<TM
       y: world.y - pointerSession.lastWorld.y,
     };
 
-    const dragId = effectiveDragId(dragTarget);
-    const dragMeta = effectiveDragMeta(dragTarget);
-
     if (!pointerSession.dragStarted) {
       pointerSession.dragStarted = true;
       emit({
         type: "dragStart",
-        entityId: dragId,
         screen,
         world,
-        meta: dragMeta,
+        target,
       });
       invalidate();
     }
@@ -157,11 +154,10 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions): Sakune<TM
     pointerSession.lastWorld = world;
     emit({
       type: "dragMove",
-      entityId: dragId,
       screen,
       world,
       delta,
-      meta: dragMeta,
+      target,
     });
   };
 
@@ -170,28 +166,27 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions): Sakune<TM
 
     const screen = screenFromEvent(event);
     const world = screen;
-    const dragTarget = pointerSession.drawable;
-    const wasDragging = pointerSession.dragStarted === true && dragTarget !== null;
+    const target = pointerSession.dragTarget;
+    const wasDragging = pointerSession.dragStarted === true && target !== null;
 
-    if (wasDragging && dragTarget) {
-      const dragId = effectiveDragId(dragTarget);
-      const dragMeta = effectiveDragMeta(dragTarget);
-      const target = toHitResult(hitTestDrawables(drawables, world, dragId));
+    if (wasDragging && target !== null) {
+      const dropTarget = toHitResult(
+        hitTestDrawables(drawables, world, (d) => isInDragGroup(d, target)),
+      );
       emit({
         type: "dragEnd",
-        entityId: dragId,
         screen,
         world,
         target,
-        meta: dragMeta,
+        dropTarget,
       });
     } else {
-      const target = toHitResult(hitTestDrawables(drawables, world));
+      const clickTarget = toHitResult(hitTestDrawables(drawables, world));
       emit({
         type: "click",
         screen,
         world,
-        target,
+        target: clickTarget,
       });
     }
 
@@ -208,18 +203,17 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions): Sakune<TM
 
   const onPointerCancel = (event: PointerEvent): void => {
     if (!pointerSession || pointerSession.pointerId !== event.pointerId) return;
-    const dragTarget = pointerSession.drawable;
-    const wasDragging = pointerSession.dragStarted === true && dragTarget !== null;
-    if (wasDragging && dragTarget) {
+    const target = pointerSession.dragTarget;
+    const wasDragging = pointerSession.dragStarted === true && target !== null;
+    if (wasDragging && target !== null) {
       const screen = screenFromEvent(event);
       const world = screen;
       emit({
         type: "dragEnd",
-        entityId: effectiveDragId(dragTarget),
         screen,
         world,
-        target: null,
-        meta: effectiveDragMeta(dragTarget),
+        target,
+        dropTarget: null,
       });
     }
     pointerSession = null;
@@ -272,7 +266,11 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions): Sakune<TM
     },
 
     hitTest(point: Point, options?: HitTestOptions): HitResult<TMeta> | null {
-      return toHitResult(hitTestDrawables(drawables, point, options?.excludeId));
+      const exclude =
+        options?.excludeId !== undefined
+          ? (d: Drawable<TMeta>) => d.id === options.excludeId
+          : undefined;
+      return toHitResult(hitTestDrawables(drawables, point, exclude));
     },
   };
 }

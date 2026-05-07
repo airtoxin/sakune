@@ -12,6 +12,7 @@ export type {
   SakuneScene,
   SceneItem,
   Size,
+  StackDragMode,
   StackItem,
   StackLayout,
   Visual,
