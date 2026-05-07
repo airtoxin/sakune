@@ -23,15 +23,18 @@ export function flattenScene<TMeta>(scene: SakuneScene<TMeta>): Drawable<TMeta>[
     }
 
     const offset = item.layout?.offset ?? DEFAULT_PILE_OFFSET;
+    const stackDraggable = item.draggable === true;
     item.items.forEach((stackItem, index) => {
       drawables.push({
         id: stackItem.id,
+        groupId: stackDraggable ? item.id : undefined,
+        groupMeta: stackDraggable ? item.meta : undefined,
         x: item.x + offset.x * index,
         y: item.y + offset.y * index,
         size: stackItem.size,
         visual: stackItem.visual,
         hitArea: stackItem.hitArea,
-        draggable: stackItem.draggable,
+        draggable: stackDraggable ? true : stackItem.draggable,
         meta: stackItem.meta,
         order: order++,
       });

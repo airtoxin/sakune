@@ -1,7 +1,12 @@
 import "./style.css";
 import { createSakune, type SakuneScene } from "sakune";
 
-type Meta = { type: "card"; cardId: string } | { type: "piece"; pieceId: string };
+type Meta =
+  | { type: "card"; cardId: string }
+  | { type: "piece"; pieceId: string }
+  | { type: "stack"; stackId: string };
+
+type Position = { x: number; y: number };
 
 type EntityKind = "card" | "piece";
 
@@ -10,6 +15,20 @@ type Entity = {
   kind: EntityKind;
   x: number;
   y: number;
+};
+
+type Deck = {
+  id: "deck";
+  x: number;
+  y: number;
+  cards: { id: string }[];
+};
+
+const deck: Deck = {
+  id: "deck",
+  x: 80,
+  y: 100,
+  cards: [{ id: "deck-1" }, { id: "deck-2" }, { id: "deck-3" }, { id: "deck-4" }],
 };
 
 const entities: Entity[] = [
@@ -22,6 +41,11 @@ const entities: Entity[] = [
 
 function findEntity(id: string): Entity | undefined {
   return entities.find((entity) => entity.id === id);
+}
+
+function getPosition(id: string): Position | null {
+  if (id === deck.id) return deck;
+  return findEntity(id) ?? null;
 }
 
 function moveEntityToTop(id: string): void {
@@ -45,36 +69,18 @@ function buildScene(): SakuneScene<Meta> {
     items: [
       {
         type: "stack",
-        id: "deck",
-        x: 80,
-        y: 80,
+        id: deck.id,
+        x: deck.x,
+        y: deck.y,
         layout: { type: "pile", offset: { x: 0, y: -4 } },
-        items: [
-          {
-            id: "deck-1",
-            size: { width: 96, height: 132 },
-            visual: { type: "rect", fill: "#fff", stroke: "#333", radius: 10 },
-            meta: { type: "card", cardId: "deck-1" },
-          },
-          {
-            id: "deck-2",
-            size: { width: 96, height: 132 },
-            visual: { type: "rect", fill: "#fff", stroke: "#333", radius: 10 },
-            meta: { type: "card", cardId: "deck-2" },
-          },
-          {
-            id: "deck-3",
-            size: { width: 96, height: 132 },
-            visual: { type: "rect", fill: "#fff", stroke: "#333", radius: 10 },
-            meta: { type: "card", cardId: "deck-3" },
-          },
-          {
-            id: "deck-4",
-            size: { width: 96, height: 132 },
-            visual: { type: "rect", fill: "#fff", stroke: "#333", radius: 10 },
-            meta: { type: "card", cardId: "deck-4" },
-          },
-        ],
+        draggable: true,
+        meta: { type: "stack", stackId: deck.id },
+        items: deck.cards.map((card) => ({
+          id: card.id,
+          size: { width: 96, height: 132 },
+          visual: { type: "rect", fill: "#fff", stroke: "#333", radius: 10 },
+          meta: { type: "card", cardId: card.id },
+        })),
       },
       ...entities.map((entity) => {
         if (entity.kind === "card") {
@@ -117,27 +123,27 @@ function buildScene(): SakuneScene<Meta> {
 let dragOffset: { dx: number; dy: number } | null = null;
 
 sakune.on("dragStart", (event) => {
-  const entity = findEntity(event.entityId);
-  if (!entity) return;
+  const position = getPosition(event.entityId);
+  if (!position) return;
   dragOffset = {
-    dx: event.world.x - entity.x,
-    dy: event.world.y - entity.y,
+    dx: event.world.x - position.x,
+    dy: event.world.y - position.y,
   };
   log.textContent = `dragStart  ${event.entityId}`;
 });
 
 sakune.on("dragMove", (event) => {
   if (!dragOffset) return;
-  const entity = findEntity(event.entityId);
-  if (!entity) return;
-  entity.x = event.world.x - dragOffset.dx;
-  entity.y = event.world.y - dragOffset.dy;
+  const position = getPosition(event.entityId);
+  if (!position) return;
+  position.x = event.world.x - dragOffset.dx;
+  position.y = event.world.y - dragOffset.dy;
   sakune.setScene(buildScene());
 });
 
 sakune.on("dragEnd", (event) => {
   dragOffset = null;
-  moveEntityToTop(event.entityId);
+  if (event.entityId !== deck.id) moveEntityToTop(event.entityId);
   sakune.setScene(buildScene());
   log.textContent = `dragEnd    ${event.entityId} → ${event.target?.id ?? "—"}`;
 });

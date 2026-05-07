@@ -62,6 +62,7 @@ export type RenderStack<TMeta = unknown> = {
   y: number;
   items: StackItem<TMeta>[];
   layout?: StackLayout;
+  draggable?: boolean;
   meta?: TMeta;
 };
 
@@ -129,6 +130,8 @@ export type Sakune<TMeta = unknown> = {
 
 export type Drawable<TMeta = unknown> = {
   id: string;
+  groupId?: string;
+  groupMeta?: TMeta;
   x: number;
   y: number;
   size: Size;

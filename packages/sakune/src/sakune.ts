@@ -1,6 +1,6 @@
 import { drawDrawable } from "./draw.ts";
 import { flattenScene } from "./flatten.ts";
-import { hitTestDrawables, toHitResult } from "./hitTest.ts";
+import { effectiveDragId, effectiveDragMeta, hitTestDrawables, toHitResult } from "./hitTest.ts";
 import type {
   Drawable,
   HitResult,
@@ -54,7 +54,7 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions): Sakune<TM
   const render = (): void => {
     const activeDragId =
       pointerSession !== null && pointerSession.dragStarted && pointerSession.drawable !== null
-        ? pointerSession.drawable.id
+        ? effectiveDragId(pointerSession.drawable)
         : null;
 
     ctx.save();
@@ -67,15 +67,15 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions): Sakune<TM
         drawDrawable(ctx, drawable);
       }
     } else {
-      let hoisted: Drawable<TMeta> | null = null;
+      const hoisted: Drawable<TMeta>[] = [];
       for (const drawable of drawables) {
-        if (drawable.id === activeDragId) {
-          hoisted = drawable;
+        if (effectiveDragId(drawable) === activeDragId) {
+          hoisted.push(drawable);
           continue;
         }
         drawDrawable(ctx, drawable);
       }
-      if (hoisted !== null) drawDrawable(ctx, hoisted);
+      for (const drawable of hoisted) drawDrawable(ctx, drawable);
     }
 
     ctx.restore();
@@ -139,14 +139,17 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions): Sakune<TM
       y: world.y - pointerSession.lastWorld.y,
     };
 
+    const dragId = effectiveDragId(dragTarget);
+    const dragMeta = effectiveDragMeta(dragTarget);
+
     if (!pointerSession.dragStarted) {
       pointerSession.dragStarted = true;
       emit({
         type: "dragStart",
-        entityId: dragTarget.id,
+        entityId: dragId,
         screen,
         world,
-        meta: dragTarget.meta,
+        meta: dragMeta,
       });
       invalidate();
     }
@@ -154,11 +157,11 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions): Sakune<TM
     pointerSession.lastWorld = world;
     emit({
       type: "dragMove",
-      entityId: dragTarget.id,
+      entityId: dragId,
       screen,
       world,
       delta,
-      meta: dragTarget.meta,
+      meta: dragMeta,
     });
   };
 
@@ -171,14 +174,16 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions): Sakune<TM
     const wasDragging = pointerSession.dragStarted === true && dragTarget !== null;
 
     if (wasDragging && dragTarget) {
-      const target = toHitResult(hitTestDrawables(drawables, world, dragTarget.id));
+      const dragId = effectiveDragId(dragTarget);
+      const dragMeta = effectiveDragMeta(dragTarget);
+      const target = toHitResult(hitTestDrawables(drawables, world, dragId));
       emit({
         type: "dragEnd",
-        entityId: dragTarget.id,
+        entityId: dragId,
         screen,
         world,
         target,
-        meta: dragTarget.meta,
+        meta: dragMeta,
       });
     } else {
       const target = toHitResult(hitTestDrawables(drawables, world));
@@ -210,11 +215,11 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions): Sakune<TM
       const world = screen;
       emit({
         type: "dragEnd",
-        entityId: dragTarget.id,
+        entityId: effectiveDragId(dragTarget),
         screen,
         world,
         target: null,
-        meta: dragTarget.meta,
+        meta: effectiveDragMeta(dragTarget),
       });
     }
     pointerSession = null;

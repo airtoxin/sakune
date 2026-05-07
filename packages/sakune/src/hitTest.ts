@@ -1,5 +1,13 @@
 import type { Drawable, HitResult, Point } from "./types.ts";
 
+export function effectiveDragId<TMeta>(drawable: Drawable<TMeta>): string {
+  return drawable.groupId ?? drawable.id;
+}
+
+export function effectiveDragMeta<TMeta>(drawable: Drawable<TMeta>): TMeta | undefined {
+  return drawable.groupId !== undefined ? drawable.groupMeta : drawable.meta;
+}
+
 export function pointInDrawable<TMeta>(drawable: Drawable<TMeta>, point: Point): boolean {
   const { x, y, size } = drawable;
   const hitType = drawable.hitArea?.type ?? "rect";
@@ -23,7 +31,7 @@ export function hitTestDrawables<TMeta>(
 ): Drawable<TMeta> | null {
   for (let i = drawables.length - 1; i >= 0; i--) {
     const drawable = drawables[i] as Drawable<TMeta>;
-    if (drawable.id === excludeId) continue;
+    if (excludeId !== undefined && effectiveDragId(drawable) === excludeId) continue;
     if (pointInDrawable(drawable, point)) return drawable;
   }
   return null;
@@ -31,5 +39,8 @@ export function hitTestDrawables<TMeta>(
 
 export function toHitResult<TMeta>(drawable: Drawable<TMeta> | null): HitResult<TMeta> | null {
   if (!drawable) return null;
-  return { id: drawable.id, meta: drawable.meta };
+  return {
+    id: effectiveDragId(drawable),
+    meta: effectiveDragMeta(drawable),
+  };
 }

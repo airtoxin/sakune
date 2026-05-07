@@ -82,6 +82,65 @@ test("flattenScene defaults stack offset to (0, -4)", () => {
   expect(drawables[1]).toMatchObject({ x: 0, y: -4 });
 });
 
+test("flattenScene marks stack items with groupId when stack is draggable", () => {
+  type StackMeta = { kind: "deck"; deckId: string };
+  const drawables = flattenScene<StackMeta>({
+    items: [
+      {
+        type: "stack",
+        id: "deck",
+        x: 0,
+        y: 0,
+        draggable: true,
+        meta: { kind: "deck", deckId: "main" },
+        items: [
+          { id: "c1", size: { width: 10, height: 10 }, visual: { type: "rect" } },
+          { id: "c2", size: { width: 10, height: 10 }, visual: { type: "rect" } },
+        ],
+      },
+    ],
+  });
+
+  expect(drawables[0]).toMatchObject({
+    id: "c1",
+    groupId: "deck",
+    groupMeta: { kind: "deck", deckId: "main" },
+    draggable: true,
+  });
+  expect(drawables[1]).toMatchObject({
+    id: "c2",
+    groupId: "deck",
+    groupMeta: { kind: "deck", deckId: "main" },
+    draggable: true,
+  });
+});
+
+test("flattenScene leaves stack items unattributed when stack is not draggable", () => {
+  const drawables = flattenScene({
+    items: [
+      {
+        type: "stack",
+        id: "deck",
+        x: 0,
+        y: 0,
+        items: [
+          {
+            id: "c1",
+            size: { width: 10, height: 10 },
+            visual: { type: "rect" },
+            draggable: true,
+          },
+          { id: "c2", size: { width: 10, height: 10 }, visual: { type: "rect" } },
+        ],
+      },
+    ],
+  });
+
+  expect(drawables[0]?.groupId).toBeUndefined();
+  expect(drawables[0]?.draggable).toBe(true);
+  expect(drawables[1]?.draggable).toBeUndefined();
+});
+
 test("flattenScene assigns global order across mixed items", () => {
   const drawables = flattenScene({
     items: [
