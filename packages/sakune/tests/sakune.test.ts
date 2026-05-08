@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, test } from "vite-plus/test";
 import { createSakune } from "../src/sakune.ts";
-import type { HitResult } from "../src/types.ts";
+import type { DragSnapContext, HitResult, Point } from "../src/types.ts";
 
 type MockCtxCall = { method: string; args: unknown[] };
 
@@ -1098,4 +1098,291 @@ test("dragMode 'slice-from-item': hoists hit item and items above to the top", (
 
   const ys = ctx.calls.filter((c) => c.method === "rect").map((c) => c.args[1]);
   expect(ys).toEqual([0, 0, -120, -240]);
+});
+
+const draggableScene = {
+  items: [
+    {
+      type: "entity" as const,
+      id: "drag",
+      x: 0,
+      y: 0,
+      size: { width: 100, height: 100 },
+      visual: { type: "rect" as const },
+      draggable: true,
+    },
+  ],
+};
+
+test("snap.drag receives context with target, world, delta, startWorld and previousPreviewWorld", () => {
+  const { canvas, fire } = createMockCanvas();
+  const contexts: DragSnapContext[] = [];
+  const sakune = createSakune({
+    canvas,
+    pixelRatio: 1,
+    snap: {
+      drag: (context) => {
+        contexts.push(context);
+        return null;
+      },
+    },
+  });
+
+  sakune.setScene(draggableScene);
+
+  fire("pointerdown", { pointerId: 1, clientX: 10, clientY: 10 });
+  fire("pointermove", { pointerId: 1, clientX: 25, clientY: 18 });
+  fire("pointermove", { pointerId: 1, clientX: 40, clientY: 30 });
+  fire("pointerup", { pointerId: 1, clientX: 40, clientY: 30 });
+
+  expect(contexts).toHaveLength(3);
+  expect(contexts[0]).toMatchObject({
+    target: { type: "entity", id: "drag", meta: undefined },
+    world: { x: 25, y: 18 },
+    delta: { x: 15, y: 8 },
+    startWorld: { x: 10, y: 10 },
+    previousPreviewWorld: { x: 10, y: 10 },
+  });
+  expect(contexts[1]).toMatchObject({
+    world: { x: 40, y: 30 },
+    delta: { x: 15, y: 12 },
+    startWorld: { x: 10, y: 10 },
+    previousPreviewWorld: { x: 25, y: 18 },
+  });
+  expect(contexts[2]).toMatchObject({
+    world: { x: 40, y: 30 },
+    delta: { x: 0, y: 0 },
+    startWorld: { x: 10, y: 10 },
+    previousPreviewWorld: { x: 40, y: 30 },
+  });
+});
+
+test("snap.drag returning a Point sets previewWorld on dragMove and dragEnd", () => {
+  const { canvas, fire } = createMockCanvas();
+  const sakune = createSakune({
+    canvas,
+    pixelRatio: 1,
+    snap: {
+      drag: ({ world }) => ({
+        x: Math.round(world.x / 50) * 50,
+        y: Math.round(world.y / 50) * 50,
+      }),
+    },
+  });
+  sakune.setScene(draggableScene);
+
+  const moves: { world: Point; preview: Point }[] = [];
+  const ends: { world: Point; preview: Point }[] = [];
+  sakune.on("dragMove", (event) => {
+    moves.push({ world: event.world, preview: event.previewWorld });
+  });
+  sakune.on("dragEnd", (event) => {
+    ends.push({ world: event.world, preview: event.previewWorld });
+  });
+
+  fire("pointerdown", { pointerId: 1, clientX: 10, clientY: 10 });
+  fire("pointermove", { pointerId: 1, clientX: 73, clientY: 22 });
+  fire("pointermove", { pointerId: 1, clientX: 128, clientY: 88 });
+  fire("pointerup", { pointerId: 1, clientX: 128, clientY: 88 });
+
+  expect(moves).toEqual([
+    { world: { x: 73, y: 22 }, preview: { x: 50, y: 0 } },
+    { world: { x: 128, y: 88 }, preview: { x: 150, y: 100 } },
+  ]);
+  expect(ends).toEqual([{ world: { x: 128, y: 88 }, preview: { x: 150, y: 100 } }]);
+});
+
+test("snap.drag returning null leaves previewWorld equal to world", () => {
+  const { canvas, fire } = createMockCanvas();
+  const sakune = createSakune({
+    canvas,
+    pixelRatio: 1,
+    snap: { drag: () => null },
+  });
+  sakune.setScene(draggableScene);
+
+  const previews: Point[] = [];
+  sakune.on("dragMove", (event) => {
+    previews.push(event.previewWorld);
+  });
+
+  fire("pointerdown", { pointerId: 1, clientX: 10, clientY: 10 });
+  fire("pointermove", { pointerId: 1, clientX: 23, clientY: 17 });
+  fire("pointerup", { pointerId: 1, clientX: 23, clientY: 17 });
+
+  expect(previews).toEqual([{ x: 23, y: 17 }]);
+});
+
+test("dragStart previewWorld matches startWorld", () => {
+  const { canvas, fire } = createMockCanvas();
+  const sakune = createSakune({
+    canvas,
+    pixelRatio: 1,
+    snap: { drag: () => ({ x: 999, y: 999 }) },
+  });
+  sakune.setScene(draggableScene);
+
+  const starts: { world: Point; preview: Point }[] = [];
+  sakune.on("dragStart", (event) => {
+    starts.push({ world: event.world, preview: event.previewWorld });
+  });
+
+  fire("pointerdown", { pointerId: 1, clientX: 12, clientY: 8 });
+  fire("pointermove", { pointerId: 1, clientX: 30, clientY: 30 });
+  fire("pointerup", { pointerId: 1, clientX: 30, clientY: 30 });
+
+  expect(starts).toEqual([{ world: { x: 12, y: 8 }, preview: { x: 12, y: 8 } }]);
+});
+
+test("snap.drag receives modifier keys from PointerEvent", () => {
+  const { canvas, fire } = createMockCanvas();
+  const contexts: DragSnapContext[] = [];
+  const sakune = createSakune({
+    canvas,
+    pixelRatio: 1,
+    snap: {
+      drag: (context) => {
+        contexts.push(context);
+        return null;
+      },
+    },
+  });
+  sakune.setScene(draggableScene);
+
+  fire("pointerdown", { pointerId: 1, clientX: 10, clientY: 10 });
+  fire("pointermove", {
+    pointerId: 1,
+    clientX: 20,
+    clientY: 20,
+    shiftKey: true,
+    altKey: true,
+    ctrlKey: false,
+    metaKey: false,
+  } as Partial<PointerEvent>);
+  fire("pointerup", {
+    pointerId: 1,
+    clientX: 20,
+    clientY: 20,
+    metaKey: true,
+  } as Partial<PointerEvent>);
+
+  expect(contexts[0]?.modifiers).toEqual({
+    shift: true,
+    alt: true,
+    ctrl: false,
+    meta: false,
+  });
+  expect(contexts[1]?.modifiers).toEqual({
+    shift: false,
+    alt: false,
+    ctrl: false,
+    meta: true,
+  });
+});
+
+test("dragged entity renders at the snapped preview position", () => {
+  const { canvas, ctx, fire } = createMockCanvas();
+  const sakune = createSakune({
+    canvas,
+    pixelRatio: 1,
+    snap: {
+      drag: ({ world }) => ({
+        x: Math.round(world.x / 50) * 50,
+        y: Math.round(world.y / 50) * 50,
+      }),
+    },
+  });
+  sakune.setScene(draggableScene);
+  flushRaf();
+
+  ctx.calls.length = 0;
+  fire("pointerdown", { pointerId: 1, clientX: 10, clientY: 10 });
+  fire("pointermove", { pointerId: 1, clientX: 73, clientY: 22 });
+  flushRaf();
+
+  const positions = ctx.calls
+    .filter((c) => c.method === "rect")
+    .map((c) => ({ x: c.args[0], y: c.args[1] }));
+  // entity (0,0) shifted by previewWorld(50,0) - startWorld(10,10) = (40,-10)
+  expect(positions).toEqual([{ x: 40, y: -10 }]);
+});
+
+test("dragEnd dropTarget hit-tests at the snapped preview position", () => {
+  const { canvas, fire } = createMockCanvas();
+  const sakune = createSakune({
+    canvas,
+    pixelRatio: 1,
+    snap: {
+      // snap to (200, 200) so the drop test should hit the "dst" entity
+      drag: () => ({ x: 220, y: 220 }),
+    },
+  });
+
+  sakune.setScene({
+    items: [
+      {
+        type: "entity",
+        id: "src",
+        x: 0,
+        y: 0,
+        size: { width: 50, height: 50 },
+        visual: { type: "rect" },
+        draggable: true,
+      },
+      {
+        type: "entity",
+        id: "dst",
+        x: 200,
+        y: 200,
+        size: { width: 50, height: 50 },
+        visual: { type: "rect" },
+      },
+    ],
+  });
+
+  const drops: (HitResult | null)[] = [];
+  sakune.on("dragEnd", (event) => {
+    drops.push(event.dropTarget);
+  });
+
+  // Pointer is in empty space; only the snap point overlaps "dst".
+  fire("pointerdown", { pointerId: 1, clientX: 10, clientY: 10 });
+  fire("pointermove", { pointerId: 1, clientX: 400, clientY: 400 });
+  fire("pointerup", { pointerId: 1, clientX: 400, clientY: 400 });
+
+  expect(drops).toEqual([{ type: "entity", id: "dst", meta: undefined }]);
+});
+
+test("setDragSnap swaps the resolver at runtime", () => {
+  const { canvas, fire } = createMockCanvas();
+  const sakune = createSakune({ canvas, pixelRatio: 1 });
+  sakune.setScene(draggableScene);
+
+  const previews: Point[] = [];
+  sakune.on("dragMove", (event) => {
+    previews.push(event.previewWorld);
+  });
+
+  // No resolver: previewWorld follows pointer.
+  fire("pointerdown", { pointerId: 1, clientX: 10, clientY: 10 });
+  fire("pointermove", { pointerId: 1, clientX: 23, clientY: 17 });
+  fire("pointerup", { pointerId: 1, clientX: 23, clientY: 17 });
+
+  sakune.setDragSnap(() => ({ x: 100, y: 100 }));
+
+  fire("pointerdown", { pointerId: 1, clientX: 10, clientY: 10 });
+  fire("pointermove", { pointerId: 1, clientX: 50, clientY: 50 });
+  fire("pointerup", { pointerId: 1, clientX: 50, clientY: 50 });
+
+  sakune.setDragSnap(null);
+
+  fire("pointerdown", { pointerId: 1, clientX: 10, clientY: 10 });
+  fire("pointermove", { pointerId: 1, clientX: 80, clientY: 80 });
+  fire("pointerup", { pointerId: 1, clientX: 80, clientY: 80 });
+
+  expect(previews).toEqual([
+    { x: 23, y: 17 },
+    { x: 100, y: 100 },
+    { x: 80, y: 80 },
+  ]);
 });

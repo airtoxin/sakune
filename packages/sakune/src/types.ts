@@ -110,6 +110,30 @@ export type HitResult<TMeta = unknown> =
       }[];
     };
 
+export type DragSnapModifiers = {
+  shift: boolean;
+  alt: boolean;
+  ctrl: boolean;
+  meta: boolean;
+};
+
+export type DragSnapContext<TMeta = unknown> = {
+  target: HitResult<TMeta>;
+  world: Point;
+  delta: Point;
+  startWorld: Point;
+  previousPreviewWorld: Point;
+  modifiers: DragSnapModifiers;
+};
+
+export type DragSnapResolver<TMeta = unknown> = (
+  context: DragSnapContext<TMeta>,
+) => Point | null | undefined;
+
+export type SakuneSnapOptions<TMeta = unknown> = {
+  drag?: DragSnapResolver<TMeta>;
+};
+
 export type SakuneEvent<TMeta = unknown> =
   | {
       type: "click";
@@ -121,12 +145,14 @@ export type SakuneEvent<TMeta = unknown> =
       type: "dragStart";
       screen: Point;
       world: Point;
+      previewWorld: Point;
       target: HitResult<TMeta>;
     }
   | {
       type: "dragMove";
       screen: Point;
       world: Point;
+      previewWorld: Point;
       delta: Point;
       target: HitResult<TMeta>;
     }
@@ -134,13 +160,15 @@ export type SakuneEvent<TMeta = unknown> =
       type: "dragEnd";
       screen: Point;
       world: Point;
+      previewWorld: Point;
       target: HitResult<TMeta>;
       dropTarget: HitResult<TMeta> | null;
     };
 
-export type SakuneOptions = {
+export type SakuneOptions<TMeta = unknown> = {
   canvas: HTMLCanvasElement;
   pixelRatio?: number;
+  snap?: SakuneSnapOptions<TMeta>;
 };
 
 export type HitTestOptions = {
@@ -156,6 +184,7 @@ export type Sakune<TMeta = unknown> = {
     handler: (event: Extract<SakuneEvent<TMeta>, { type: TType }>) => void,
   ): () => void;
   hitTest(point: Point, options?: HitTestOptions): HitResult<TMeta> | null;
+  setDragSnap(resolver: DragSnapResolver<TMeta> | null | undefined): void;
 };
 
 export type Drawable<TMeta = unknown> = {
