@@ -1,5 +1,8 @@
 export { createSakune } from "./sakune.ts";
 export type {
+  DragSnapContext,
+  DragSnapModifiers,
+  DragSnapResolver,
   HitArea,
   HitResult,
   HitTestOptions,
@@ -10,6 +13,7 @@ export type {
   SakuneEvent,
   SakuneOptions,
   SakuneScene,
+  SakuneSnapOptions,
   SceneItem,
   Size,
   StackDragMode,
