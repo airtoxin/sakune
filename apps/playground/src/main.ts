@@ -1,5 +1,6 @@
 import "./style.css";
 import { createSakune, type HitResult, type SakuneScene, type SceneItem } from "sakune";
+import { squareGrid } from "sakune/boards";
 
 type Meta =
   | { type: "card"; cardId: string }
@@ -137,7 +138,19 @@ if (!canvas || !log) {
   throw new Error("Required DOM elements not found.");
 }
 
-const sakune = createSakune<Meta>({ canvas });
+const grid = squareGrid({ x: 320, y: 210, rows: 2, cols: 8, cellSize: 56 });
+
+const sakune = createSakune<Meta>({
+  canvas,
+  snap: {
+    drag: ({ target, world }) => {
+      if (target.type !== "entity") return null;
+      const cell = grid.worldToCell(world);
+      if (!cell) return null;
+      return grid.cellCenter(cell);
+    },
+  },
+});
 sakune.resize(800, 480);
 
 function pieceStrokes(color: string): { stroke: string; capStroke: string } {
@@ -174,6 +187,14 @@ function pieceStackItem(piece: StackPiece): {
 
 function buildScene(): SakuneScene<Meta> {
   const items: SceneItem<Meta>[] = [
+    ...grid.render<Meta>({
+      idPrefix: "grid",
+      visual: (cell) => ({
+        type: "rect",
+        fill: (cell.row + cell.col) % 2 === 0 ? "#ede4ce" : "#dccfa9",
+        stroke: "#bda878",
+      }),
+    }),
     {
       type: "stack",
       id: deck.id,
@@ -281,8 +302,8 @@ sakune.on("dragEnd", (event) => {
   if (offset) {
     const position = getEntityPosition(event.target);
     if (position) {
-      position.x = event.world.x - offset.dx;
-      position.y = event.world.y - offset.dy;
+      position.x = event.previewWorld.x - offset.dx;
+      position.y = event.previewWorld.y - offset.dy;
     }
   }
 

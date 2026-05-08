@@ -24,10 +24,13 @@
           <li>
             左下のピース塔（4 個）は <code>slice-from-item</code> — 掴んだ位置から上を持ち上げる
           </li>
-          <li>右上のカード 3 枚は単独ドラッグ</li>
+          <li>右上のカード 3 枚は単独ドラッグ — 中央のグリッド上ではマス中心にスナップ</li>
           <li>
             下のピース 4 個もそれぞれ <code>slice-from-item</code> —
             別ピースの上にドロップすると塔になる
+          </li>
+          <li>
+            中央のグリッドは <code>sakune/boards</code> の <code>squareGrid</code> ヘルパーで描画
           </li>
         </ul>
       </aside>
