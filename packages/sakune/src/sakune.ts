@@ -25,6 +25,12 @@ type PointerSession<TMeta> = {
   dragStarted: boolean;
 };
 
+type ActiveDrag<TMeta> = {
+  target: HitResult<TMeta>;
+  startWorld: Point;
+  currentWorld: Point;
+};
+
 function defaultPixelRatio(): number {
   const value = (globalThis as { devicePixelRatio?: number }).devicePixelRatio;
   return typeof value === "number" && value > 0 ? value : 1;
@@ -43,6 +49,7 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions): Sakune<TM
   let renderScheduled = false;
   let destroyed = false;
   let pointerSession: PointerSession<TMeta> | null = null;
+  let activeDrag: ActiveDrag<TMeta> | null = null;
 
   const listeners: EventListeners<TMeta> = {
     click: new Set(),
@@ -52,30 +59,33 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions): Sakune<TM
   };
 
   const render = (): void => {
-    const activeTarget =
-      pointerSession !== null && pointerSession.dragStarted && pointerSession.dragTarget !== null
-        ? pointerSession.dragTarget
-        : null;
-
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.scale(pixelRatio, pixelRatio);
 
-    if (activeTarget === null) {
+    if (activeDrag === null) {
       for (const drawable of drawables) {
         drawDrawable(ctx, drawable);
       }
     } else {
-      const hoisted: Drawable<TMeta>[] = [];
+      const dx = activeDrag.currentWorld.x - activeDrag.startWorld.x;
+      const dy = activeDrag.currentWorld.y - activeDrag.startWorld.y;
+      const dragging: Drawable<TMeta>[] = [];
       for (const drawable of drawables) {
-        if (isInDragGroup(drawable, activeTarget)) {
-          hoisted.push(drawable);
+        if (isInDragGroup(drawable, activeDrag.target)) {
+          dragging.push(drawable);
           continue;
         }
         drawDrawable(ctx, drawable);
       }
-      for (const drawable of hoisted) drawDrawable(ctx, drawable);
+      for (const drawable of dragging) {
+        drawDrawable(ctx, {
+          ...drawable,
+          x: drawable.x + dx,
+          y: drawable.y + dy,
+        });
+      }
     }
 
     ctx.restore();
@@ -142,16 +152,23 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions): Sakune<TM
 
     if (!pointerSession.dragStarted) {
       pointerSession.dragStarted = true;
+      activeDrag = {
+        target,
+        startWorld: pointerSession.startWorld,
+        currentWorld: world,
+      };
       emit({
         type: "dragStart",
-        screen,
-        world,
+        screen: pointerSession.startScreen,
+        world: pointerSession.startWorld,
         target,
       });
-      invalidate();
+    } else if (activeDrag !== null) {
+      activeDrag.currentWorld = world;
     }
 
     pointerSession.lastWorld = world;
+    invalidate();
     emit({
       type: "dragMove",
       screen,
@@ -198,6 +215,7 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions): Sakune<TM
       }
     }
     pointerSession = null;
+    activeDrag = null;
     if (wasDragging) invalidate();
   };
 
@@ -217,6 +235,7 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions): Sakune<TM
       });
     }
     pointerSession = null;
+    activeDrag = null;
     if (wasDragging) invalidate();
   };
 
@@ -247,6 +266,7 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions): Sakune<TM
       canvas.removeEventListener("pointercancel", onPointerCancel);
       drawables = [];
       pointerSession = null;
+      activeDrag = null;
       for (const set of Object.values(listeners)) {
         (set as Set<unknown>).clear();
       }
