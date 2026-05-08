@@ -129,14 +129,6 @@ function describeTarget(target: HitResult<Meta> | null): string {
   }
 }
 
-let activeSlice: {
-  sourcePileId: string;
-  fromIndex: number;
-  pieces: StackPiece[];
-  x: number;
-  y: number;
-} | null = null;
-
 let dragOffset: { dx: number; dy: number } | null = null;
 
 const canvas = document.querySelector<HTMLCanvasElement>("#board");
@@ -215,11 +207,7 @@ function buildScene(): SakuneScene<Meta> {
   ];
 
   for (const pile of piles) {
-    let pieces = pile.pieces;
-    if (activeSlice && pile.id === activeSlice.sourcePileId) {
-      pieces = pile.pieces.slice(0, activeSlice.fromIndex);
-    }
-    if (pieces.length === 0) continue;
+    if (pile.pieces.length === 0) continue;
     items.push({
       type: "stack",
       id: pile.id,
@@ -228,22 +216,7 @@ function buildScene(): SakuneScene<Meta> {
       layout: { type: "pile", offset: { x: 0, y: PIECE_STACK_OFFSET_Y } },
       dragMode: "slice-from-item",
       meta: { type: "stack", stackId: pile.id },
-      items: pieces.map(pieceStackItem),
-    });
-  }
-
-  if (activeSlice) {
-    items.push({
-      type: "stack",
-      id: `${activeSlice.sourcePileId}-slice`,
-      x: activeSlice.x,
-      y: activeSlice.y,
-      layout: { type: "pile", offset: { x: 0, y: PIECE_STACK_OFFSET_Y } },
-      meta: {
-        type: "stack",
-        stackId: `${activeSlice.sourcePileId}-slice`,
-      },
-      items: activeSlice.pieces.map(pieceStackItem),
+      items: pile.pieces.map(pieceStackItem),
     });
   }
 
@@ -253,26 +226,16 @@ function buildScene(): SakuneScene<Meta> {
 sakune.on("dragStart", (event) => {
   log.textContent = `dragStart  ${describeTarget(event.target)}`;
   dragOffset = null;
-  activeSlice = null;
 
   if (event.target.type === "stackSlice") {
     const sourcePile = findPile(event.target.stackId);
     if (!sourcePile) return;
-    const fromIndex = event.target.fromIndex;
     const sliceX = sourcePile.x;
-    const sliceY = sourcePile.y + PIECE_STACK_OFFSET_Y * fromIndex;
-    activeSlice = {
-      sourcePileId: sourcePile.id,
-      fromIndex,
-      pieces: sourcePile.pieces.slice(fromIndex),
-      x: sliceX,
-      y: sliceY,
-    };
+    const sliceY = sourcePile.y + PIECE_STACK_OFFSET_Y * event.target.fromIndex;
     dragOffset = {
       dx: event.world.x - sliceX,
       dy: event.world.y - sliceY,
     };
-    sakune.setScene(buildScene());
     return;
   }
 
@@ -284,54 +247,43 @@ sakune.on("dragStart", (event) => {
   };
 });
 
-sakune.on("dragMove", (event) => {
-  if (!dragOffset) return;
-
-  if (event.target.type === "stackSlice" && activeSlice) {
-    activeSlice.x = event.world.x - dragOffset.dx;
-    activeSlice.y = event.world.y - dragOffset.dy;
-    sakune.setScene(buildScene());
-    return;
-  }
-
-  const position = getEntityPosition(event.target);
-  if (!position) return;
-  position.x = event.world.x - dragOffset.dx;
-  position.y = event.world.y - dragOffset.dy;
-  sakune.setScene(buildScene());
-});
-
 sakune.on("dragEnd", (event) => {
+  const offset = dragOffset;
   dragOffset = null;
   log.textContent = `dragEnd    ${describeTarget(event.target)} → ${describeTarget(event.dropTarget)}`;
 
-  if (event.target.type === "stackSlice" && activeSlice) {
-    const slice = activeSlice;
-    activeSlice = null;
-
-    const sourcePile = findPile(slice.sourcePileId);
-    if (sourcePile) {
-      sourcePile.pieces = sourcePile.pieces.slice(0, slice.fromIndex);
-    }
+  if (event.target.type === "stackSlice") {
+    const sourcePile = findPile(event.target.stackId);
+    if (!sourcePile || !offset) return;
+    const slicePieces = sourcePile.pieces.slice(event.target.fromIndex);
+    sourcePile.pieces = sourcePile.pieces.slice(0, event.target.fromIndex);
 
     const targetPileId = dropTargetPileId(event.dropTarget);
     const targetPile = targetPileId ? findPile(targetPileId) : null;
 
     if (targetPile) {
-      targetPile.pieces.push(...slice.pieces);
+      targetPile.pieces.push(...slicePieces);
       bringPileToTop(targetPile);
     } else {
       piles.push({
         id: newPileId(),
-        x: slice.x,
-        y: slice.y,
-        pieces: slice.pieces,
+        x: event.world.x - offset.dx,
+        y: event.world.y - offset.dy,
+        pieces: slicePieces,
       });
     }
 
     removeEmptyPiles();
     sakune.setScene(buildScene());
     return;
+  }
+
+  if (offset) {
+    const position = getEntityPosition(event.target);
+    if (position) {
+      position.x = event.world.x - offset.dx;
+      position.y = event.world.y - offset.dy;
+    }
   }
 
   if (event.target.type === "entity") {

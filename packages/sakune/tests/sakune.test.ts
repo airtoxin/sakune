@@ -553,7 +553,7 @@ test("dragging item is rendered last (on top) during drag", () => {
   fire("pointermove", { pointerId: 1, clientX: 30, clientY: 30 });
   flushRaf();
 
-  expect(ctx.calls.filter((c) => c.method === "rect").map((c) => c.args[0])).toEqual([200, 10]);
+  expect(ctx.calls.filter((c) => c.method === "rect").map((c) => c.args[0])).toEqual([200, 15]);
 });
 
 test("dragEnd restores normal render order", () => {
@@ -590,6 +590,107 @@ test("pointercancel restores normal render order", () => {
   flushRaf();
 
   expect(ctx.calls.filter((c) => c.method === "rect").map((c) => c.args[0])).toEqual([10, 200]);
+});
+
+test("dragStart reports the pointerdown position as world", () => {
+  const { canvas, fire } = createMockCanvas();
+  const sakune = createSakune({ canvas, pixelRatio: 1 });
+
+  sakune.setScene({
+    items: [
+      {
+        type: "entity",
+        id: "drag",
+        x: 0,
+        y: 0,
+        size: { width: 100, height: 100 },
+        visual: { type: "rect" },
+        draggable: true,
+      },
+    ],
+  });
+
+  const starts: { world: { x: number; y: number }; screen: { x: number; y: number } }[] = [];
+  sakune.on("dragStart", (event) => {
+    starts.push({ world: event.world, screen: event.screen });
+  });
+
+  fire("pointerdown", { pointerId: 1, clientX: 12, clientY: 8 });
+  fire("pointermove", { pointerId: 1, clientX: 25, clientY: 20 });
+  fire("pointerup", { pointerId: 1, clientX: 25, clientY: 20 });
+
+  expect(starts).toEqual([{ world: { x: 12, y: 8 }, screen: { x: 12, y: 8 } }]);
+});
+
+test("dragging item follows the pointer without setScene calls", () => {
+  const { canvas, ctx, fire } = createMockCanvas();
+  const sakune = createSakune({ canvas, pixelRatio: 1 });
+
+  sakune.setScene(hoistScene);
+  flushRaf();
+
+  fire("pointerdown", { pointerId: 1, clientX: 25, clientY: 25 });
+  fire("pointermove", { pointerId: 1, clientX: 40, clientY: 35 });
+  ctx.calls.length = 0;
+  flushRaf();
+
+  const positions = ctx.calls
+    .filter((c) => c.method === "rect")
+    .map((c) => ({ x: c.args[0], y: c.args[1] }));
+  expect(positions).toEqual([
+    { x: 200, y: 10 },
+    { x: 25, y: 20 },
+  ]);
+
+  fire("pointermove", { pointerId: 1, clientX: 60, clientY: 50 });
+  ctx.calls.length = 0;
+  flushRaf();
+
+  const positions2 = ctx.calls
+    .filter((c) => c.method === "rect")
+    .map((c) => ({ x: c.args[0], y: c.args[1] }));
+  expect(positions2).toEqual([
+    { x: 200, y: 10 },
+    { x: 45, y: 35 },
+  ]);
+});
+
+test("dragMode 'slice-from-item' hides the original slice while dragging", () => {
+  const { canvas, ctx, fire } = createMockCanvas();
+  const sakune = createSakune({ canvas, pixelRatio: 1 });
+
+  sakune.setScene({
+    items: [
+      {
+        type: "stack",
+        id: "tab",
+        x: 0,
+        y: 0,
+        dragMode: "slice-from-item",
+        layout: { type: "pile", offset: { x: 0, y: -120 } },
+        items: [
+          { id: "c0", size: { width: 80, height: 100 }, visual: { type: "rect" } },
+          { id: "c1", size: { width: 80, height: 100 }, visual: { type: "rect" } },
+          { id: "c2", size: { width: 80, height: 100 }, visual: { type: "rect" } },
+        ],
+      },
+    ],
+  });
+  flushRaf();
+
+  fire("pointerdown", { pointerId: 1, clientX: 40, clientY: -60 });
+  fire("pointermove", { pointerId: 1, clientX: 60, clientY: -40 });
+  ctx.calls.length = 0;
+  flushRaf();
+
+  const positions = ctx.calls
+    .filter((c) => c.method === "rect")
+    .map((c) => ({ x: c.args[0], y: c.args[1] }));
+  expect(positions).toEqual([
+    { x: 0, y: 0 },
+    { x: 20, y: -100 },
+    { x: 20, y: -220 },
+  ]);
 });
 
 test("click without drag does not change render order", () => {
@@ -734,7 +835,7 @@ test("dragMode 'stack': hoists every drawable in the dragged stack", () => {
   flushRaf();
 
   const ys = ctx.calls.filter((c) => c.method === "rect").map((c) => c.args[1]);
-  expect(ys).toEqual([0, 0, -4]);
+  expect(ys).toEqual([0, 10, 6]);
 });
 
 test("dragMode 'stack': dropTarget excludes every member of the dragged stack", () => {
