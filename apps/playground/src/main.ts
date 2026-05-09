@@ -144,7 +144,7 @@ const sakune = createSakune<Meta>({
   canvas,
   snap: {
     drag: ({ target, world }) => {
-      if (target.type !== "entity") return null;
+      if (target.type !== "stackSlice") return null;
       const cell = grid.worldToCell(world);
       if (!cell) return null;
       return grid.cellCenter(cell);
@@ -288,8 +288,8 @@ sakune.on("dragEnd", (event) => {
     } else {
       piles.push({
         id: newPileId(),
-        x: event.world.x - offset.dx,
-        y: event.world.y - offset.dy,
+        x: event.previewWorld.x - offset.dx,
+        y: event.previewWorld.y - offset.dy,
         pieces: slicePieces,
       });
     }
