@@ -138,16 +138,29 @@ if (!canvas || !log) {
   throw new Error("Required DOM elements not found.");
 }
 
-const grid = squareGrid({ x: 320, y: 210, rows: 2, cols: 8, cellSize: 56 });
+const GRID_CELL_SIZE = 56;
+const grid = squareGrid({ x: 320, y: 210, rows: 2, cols: 8, cellSize: GRID_CELL_SIZE });
 
 const sakune = createSakune<Meta>({
   canvas,
   snap: {
-    drag: ({ target, world }) => {
+    drag: ({ target, world, startWorld }) => {
       if (target.type !== "stackSlice") return null;
       const cell = grid.worldToCell(world);
       if (!cell) return null;
-      return grid.cellCenter(cell);
+      const sourcePile = findPile(target.stackId);
+      if (!sourcePile) return null;
+      const sliceX = sourcePile.x;
+      const sliceY = sourcePile.y + PIECE_STACK_OFFSET_Y * target.fromIndex;
+      const cellTopLeft = grid.cellToWorld(cell);
+      // Center the slice anchor (clicked piece's top-left) on the cell so the
+      // piece body lands centered regardless of where the user grabbed it.
+      const targetSliceX = cellTopLeft.x + (GRID_CELL_SIZE - PIECE_WIDTH) / 2;
+      const targetSliceY = cellTopLeft.y + (GRID_CELL_SIZE - PIECE_HEIGHT) / 2;
+      return {
+        x: startWorld.x + (targetSliceX - sliceX),
+        y: startWorld.y + (targetSliceY - sliceY),
+      };
     },
   },
 });
