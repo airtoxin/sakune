@@ -1,5 +1,6 @@
 import "./style.css";
 import { createSakune, type HitResult, type SakuneScene, type SceneItem } from "sakune";
+import { squareGrid } from "sakune/boards";
 
 type Meta =
   | { type: "card"; cardId: string }
@@ -137,7 +138,54 @@ if (!canvas || !log) {
   throw new Error("Required DOM elements not found.");
 }
 
-const sakune = createSakune<Meta>({ canvas });
+const GRID_CELL_SIZE = 56;
+const grid = squareGrid({ x: 320, y: 210, rows: 2, cols: 8, cellSize: GRID_CELL_SIZE });
+
+function pileOnCell(cell: { row: number; col: number }, excludePileId?: string): Pile | null {
+  for (const pile of piles) {
+    if (pile.id === excludePileId) continue;
+    if (pile.pieces.length === 0) continue;
+    const c = grid.worldToCell({
+      x: pile.x + PIECE_WIDTH / 2,
+      y: pile.y + PIECE_HEIGHT / 2,
+    });
+    if (c && c.row === cell.row && c.col === cell.col) return pile;
+  }
+  return null;
+}
+
+const sakune = createSakune<Meta>({
+  canvas,
+  snap: {
+    drag: ({ target, world, startWorld }) => {
+      if (target.type !== "stackSlice") return null;
+      const cell = grid.worldToCell(world);
+      if (!cell) return null;
+      const sourcePile = findPile(target.stackId);
+      if (!sourcePile) return null;
+      const sliceX = sourcePile.x;
+      const sliceY = sourcePile.y + PIECE_STACK_OFFSET_Y * target.fromIndex;
+
+      const stackTarget = pileOnCell(cell, sourcePile.id);
+      let targetSliceX: number;
+      let targetSliceY: number;
+      if (stackTarget) {
+        // Land the slice anchor right above the existing pile's top piece
+        // so the drag preview shows where pieces will end up after stacking.
+        targetSliceX = stackTarget.x;
+        targetSliceY = stackTarget.y + PIECE_STACK_OFFSET_Y * stackTarget.pieces.length;
+      } else {
+        const cellTopLeft = grid.cellToWorld(cell);
+        targetSliceX = cellTopLeft.x + (GRID_CELL_SIZE - PIECE_WIDTH) / 2;
+        targetSliceY = cellTopLeft.y + (GRID_CELL_SIZE - PIECE_HEIGHT) / 2;
+      }
+      return {
+        x: startWorld.x + (targetSliceX - sliceX),
+        y: startWorld.y + (targetSliceY - sliceY),
+      };
+    },
+  },
+});
 sakune.resize(800, 480);
 
 function pieceStrokes(color: string): { stroke: string; capStroke: string } {
@@ -173,7 +221,24 @@ function pieceStackItem(piece: StackPiece): {
 }
 
 function buildScene(): SakuneScene<Meta> {
+  const gridItems: SceneItem<Meta>[] = grid.cells().map((cell) => {
+    const pos = grid.cellToWorld(cell);
+    return {
+      type: "entity",
+      id: `grid-${cell.row}-${cell.col}`,
+      x: pos.x,
+      y: pos.y,
+      size: { width: GRID_CELL_SIZE, height: GRID_CELL_SIZE },
+      visual: {
+        type: "rect",
+        fill: (cell.row + cell.col) % 2 === 0 ? "#ede4ce" : "#dccfa9",
+        stroke: "#bda878",
+      },
+    };
+  });
+
   const items: SceneItem<Meta>[] = [
+    ...gridItems,
     {
       type: "stack",
       id: deck.id,
@@ -258,8 +323,14 @@ sakune.on("dragEnd", (event) => {
     const slicePieces = sourcePile.pieces.slice(event.target.fromIndex);
     sourcePile.pieces = sourcePile.pieces.slice(0, event.target.fromIndex);
 
-    const targetPileId = dropTargetPileId(event.dropTarget);
-    const targetPile = targetPileId ? findPile(targetPileId) : null;
+    // When the drop lands on a grid cell that already holds a pile, stack
+    // onto it even if the snapped preview hovered above the dropTarget hit.
+    const cellAtDrop = grid.worldToCell(event.world);
+    let targetPile: Pile | null = cellAtDrop ? pileOnCell(cellAtDrop, sourcePile.id) : null;
+    if (!targetPile) {
+      const targetPileId = dropTargetPileId(event.dropTarget);
+      targetPile = targetPileId ? (findPile(targetPileId) ?? null) : null;
+    }
 
     if (targetPile) {
       targetPile.pieces.push(...slicePieces);
@@ -267,8 +338,8 @@ sakune.on("dragEnd", (event) => {
     } else {
       piles.push({
         id: newPileId(),
-        x: event.world.x - offset.dx,
-        y: event.world.y - offset.dy,
+        x: event.previewWorld.x - offset.dx,
+        y: event.previewWorld.y - offset.dy,
         pieces: slicePieces,
       });
     }
@@ -281,8 +352,8 @@ sakune.on("dragEnd", (event) => {
   if (offset) {
     const position = getEntityPosition(event.target);
     if (position) {
-      position.x = event.world.x - offset.dx;
-      position.y = event.world.y - offset.dy;
+      position.x = event.previewWorld.x - offset.dx;
+      position.y = event.previewWorld.y - offset.dy;
     }
   }
 

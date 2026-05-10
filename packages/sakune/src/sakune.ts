@@ -54,7 +54,7 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions<TMeta>): Sa
   let destroyed = false;
   let pointerSession: PointerSession<TMeta> | null = null;
   let activeDrag: ActiveDrag<TMeta> | null = null;
-  let dragSnapResolver: DragSnapResolver<TMeta> | null = options.snap?.drag ?? null;
+  const dragSnapResolver: DragSnapResolver<TMeta> | null = options.snap?.drag ?? null;
 
   const resolvePreview = (
     target: HitResult<TMeta>,
@@ -353,10 +353,6 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions<TMeta>): Sa
           ? (d: Drawable<TMeta>) => d.id === options.excludeId
           : undefined;
       return toHitResult(hitTestDrawables(drawables, point, exclude));
-    },
-
-    setDragSnap(resolver: DragSnapResolver<TMeta> | null | undefined): void {
-      dragSnapResolver = resolver ?? null;
     },
   };
 }

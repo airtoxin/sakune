@@ -184,7 +184,6 @@ export type Sakune<TMeta = unknown> = {
     handler: (event: Extract<SakuneEvent<TMeta>, { type: TType }>) => void,
   ): () => void;
   hitTest(point: Point, options?: HitTestOptions): HitResult<TMeta> | null;
-  setDragSnap(resolver: DragSnapResolver<TMeta> | null | undefined): void;
 };
 
 export type Drawable<TMeta = unknown> = {
