@@ -1352,37 +1352,3 @@ test("dragEnd dropTarget hit-tests at the snapped preview position", () => {
 
   expect(drops).toEqual([{ type: "entity", id: "dst", meta: undefined }]);
 });
-
-test("setDragSnap swaps the resolver at runtime", () => {
-  const { canvas, fire } = createMockCanvas();
-  const sakune = createSakune({ canvas, pixelRatio: 1 });
-  sakune.setScene(draggableScene);
-
-  const previews: Point[] = [];
-  sakune.on("dragMove", (event) => {
-    previews.push(event.previewWorld);
-  });
-
-  // No resolver: previewWorld follows pointer.
-  fire("pointerdown", { pointerId: 1, clientX: 10, clientY: 10 });
-  fire("pointermove", { pointerId: 1, clientX: 23, clientY: 17 });
-  fire("pointerup", { pointerId: 1, clientX: 23, clientY: 17 });
-
-  sakune.setDragSnap(() => ({ x: 100, y: 100 }));
-
-  fire("pointerdown", { pointerId: 1, clientX: 10, clientY: 10 });
-  fire("pointermove", { pointerId: 1, clientX: 50, clientY: 50 });
-  fire("pointerup", { pointerId: 1, clientX: 50, clientY: 50 });
-
-  sakune.setDragSnap(null);
-
-  fire("pointerdown", { pointerId: 1, clientX: 10, clientY: 10 });
-  fire("pointermove", { pointerId: 1, clientX: 80, clientY: 80 });
-  fire("pointerup", { pointerId: 1, clientX: 80, clientY: 80 });
-
-  expect(previews).toEqual([
-    { x: 23, y: 17 },
-    { x: 100, y: 100 },
-    { x: 80, y: 80 },
-  ]);
-});

@@ -1,4 +1,4 @@
-import type { Point, SceneItem, Visual } from "./types.ts";
+import type { Point } from "./types.ts";
 
 export type SquareGridCell = {
   row: number;
@@ -13,18 +13,11 @@ export type SquareGridOptions = {
   cellSize: number;
 };
 
-export type BoardRenderOptions<TCell, TMeta = unknown> = {
-  visual?: (cell: TCell) => Visual;
-  meta?: (cell: TCell) => TMeta;
-  idPrefix?: string;
-};
-
 export type BoardHelper<TCell> = {
   cells(): TCell[];
   cellToWorld(cell: TCell): Point;
   cellCenter(cell: TCell): Point;
   worldToCell(point: Point): TCell | null;
-  render<TMeta = unknown>(options?: BoardRenderOptions<TCell, TMeta>): SceneItem<TMeta>[];
 };
 
 export function squareGrid(options: SquareGridOptions): BoardHelper<SquareGridCell> {
@@ -57,25 +50,5 @@ export function squareGrid(options: SquareGridOptions): BoardHelper<SquareGridCe
     return { row, col };
   };
 
-  const render = <TMeta = unknown>(
-    opts?: BoardRenderOptions<SquareGridCell, TMeta>,
-  ): SceneItem<TMeta>[] => {
-    const items: SceneItem<TMeta>[] = [];
-    const prefix = opts?.idPrefix ?? "cell";
-    for (const cell of cells()) {
-      const world = cellToWorld(cell);
-      items.push({
-        type: "entity",
-        id: `${prefix}-${cell.row}-${cell.col}`,
-        x: world.x,
-        y: world.y,
-        size: { width: cellSize, height: cellSize },
-        visual: opts?.visual?.(cell) ?? { type: "rect", stroke: "#ccc" },
-        meta: opts?.meta?.(cell),
-      });
-    }
-    return items;
-  };
-
-  return { cells, cellToWorld, cellCenter, worldToCell, render };
+  return { cells, cellToWorld, cellCenter, worldToCell };
 }

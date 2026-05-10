@@ -221,15 +221,24 @@ function pieceStackItem(piece: StackPiece): {
 }
 
 function buildScene(): SakuneScene<Meta> {
-  const items: SceneItem<Meta>[] = [
-    ...grid.render<Meta>({
-      idPrefix: "grid",
-      visual: (cell) => ({
+  const gridItems: SceneItem<Meta>[] = grid.cells().map((cell) => {
+    const pos = grid.cellToWorld(cell);
+    return {
+      type: "entity",
+      id: `grid-${cell.row}-${cell.col}`,
+      x: pos.x,
+      y: pos.y,
+      size: { width: GRID_CELL_SIZE, height: GRID_CELL_SIZE },
+      visual: {
         type: "rect",
         fill: (cell.row + cell.col) % 2 === 0 ? "#ede4ce" : "#dccfa9",
         stroke: "#bda878",
-      }),
-    }),
+      },
+    };
+  });
+
+  const items: SceneItem<Meta>[] = [
+    ...gridItems,
     {
       type: "stack",
       id: deck.id,
