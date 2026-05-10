@@ -141,6 +141,19 @@ if (!canvas || !log) {
 const GRID_CELL_SIZE = 56;
 const grid = squareGrid({ x: 320, y: 210, rows: 2, cols: 8, cellSize: GRID_CELL_SIZE });
 
+function pileOnCell(cell: { row: number; col: number }, excludePileId?: string): Pile | null {
+  for (const pile of piles) {
+    if (pile.id === excludePileId) continue;
+    if (pile.pieces.length === 0) continue;
+    const c = grid.worldToCell({
+      x: pile.x + PIECE_WIDTH / 2,
+      y: pile.y + PIECE_HEIGHT / 2,
+    });
+    if (c && c.row === cell.row && c.col === cell.col) return pile;
+  }
+  return null;
+}
+
 const sakune = createSakune<Meta>({
   canvas,
   snap: {
@@ -152,11 +165,20 @@ const sakune = createSakune<Meta>({
       if (!sourcePile) return null;
       const sliceX = sourcePile.x;
       const sliceY = sourcePile.y + PIECE_STACK_OFFSET_Y * target.fromIndex;
-      const cellTopLeft = grid.cellToWorld(cell);
-      // Center the slice anchor (clicked piece's top-left) on the cell so the
-      // piece body lands centered regardless of where the user grabbed it.
-      const targetSliceX = cellTopLeft.x + (GRID_CELL_SIZE - PIECE_WIDTH) / 2;
-      const targetSliceY = cellTopLeft.y + (GRID_CELL_SIZE - PIECE_HEIGHT) / 2;
+
+      const stackTarget = pileOnCell(cell, sourcePile.id);
+      let targetSliceX: number;
+      let targetSliceY: number;
+      if (stackTarget) {
+        // Land the slice anchor right above the existing pile's top piece
+        // so the drag preview shows where pieces will end up after stacking.
+        targetSliceX = stackTarget.x;
+        targetSliceY = stackTarget.y + PIECE_STACK_OFFSET_Y * stackTarget.pieces.length;
+      } else {
+        const cellTopLeft = grid.cellToWorld(cell);
+        targetSliceX = cellTopLeft.x + (GRID_CELL_SIZE - PIECE_WIDTH) / 2;
+        targetSliceY = cellTopLeft.y + (GRID_CELL_SIZE - PIECE_HEIGHT) / 2;
+      }
       return {
         x: startWorld.x + (targetSliceX - sliceX),
         y: startWorld.y + (targetSliceY - sliceY),
@@ -292,8 +314,14 @@ sakune.on("dragEnd", (event) => {
     const slicePieces = sourcePile.pieces.slice(event.target.fromIndex);
     sourcePile.pieces = sourcePile.pieces.slice(0, event.target.fromIndex);
 
-    const targetPileId = dropTargetPileId(event.dropTarget);
-    const targetPile = targetPileId ? findPile(targetPileId) : null;
+    // When the drop lands on a grid cell that already holds a pile, stack
+    // onto it even if the snapped preview hovered above the dropTarget hit.
+    const cellAtDrop = grid.worldToCell(event.world);
+    let targetPile: Pile | null = cellAtDrop ? pileOnCell(cellAtDrop, sourcePile.id) : null;
+    if (!targetPile) {
+      const targetPileId = dropTargetPileId(event.dropTarget);
+      targetPile = targetPileId ? (findPile(targetPileId) ?? null) : null;
+    }
 
     if (targetPile) {
       targetPile.pieces.push(...slicePieces);
