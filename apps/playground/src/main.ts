@@ -93,13 +93,6 @@ function removeEmptyPiles(): void {
   }
 }
 
-function dropTargetPileId(target: HitResult<Meta> | null): string | null {
-  if (!target) return null;
-  if (target.type === "stack") return target.id;
-  if (target.type === "stackItem") return target.stackId;
-  return null;
-}
-
 function getEntityPosition(target: HitResult<Meta>): Position | null {
   if (target.type === "entity") return findCard(target.id) ?? null;
   if (target.type === "stack" && target.id === deck.id) return deck;
@@ -142,11 +135,19 @@ function pileOnCell(cell: { row: number; col: number }): Pile | null {
 const sakune = createSakune<Meta>({
   canvas,
   snap: {
-    drag: ({ target, world }) => {
+    drag: ({ target, world, anchor }) => {
       if (target.type !== "stackSlice") return null;
       const cell = grid.worldToCell(world);
       if (!cell) return null;
-      if (pileOnCell(cell)) return null;
+      const pile = pileOnCell(cell);
+      if (pile && pile.id === target.stackId) {
+        // Cursor over the source cell — pin the slice to its original spot.
+        return { anchor };
+      }
+      if (pile) {
+        const next = sakune.stackNextAnchor(pile.id);
+        if (next) return { anchor: next };
+      }
       const cellTopLeft = grid.cellToWorld(cell);
       return {
         anchor: {
@@ -271,15 +272,11 @@ sakune.on("dragEnd", (event) => {
     const slicePieces = sourcePile.pieces.slice(event.target.fromIndex);
     sourcePile.pieces = sourcePile.pieces.slice(0, event.target.fromIndex);
 
-    // Prefer Sakune's dropTarget — it survives the tilted-stack case where
-    // the cursor's cell differs from the pile's anchor cell. Fall back to a
-    // cell scan only when the library didn't identify a target stack.
-    const targetPileId = dropTargetPileId(event.dropTarget);
-    let targetPile: Pile | null = targetPileId ? (findPile(targetPileId) ?? null) : null;
-    if (!targetPile) {
-      const cellAtDrop = grid.worldToCell(event.world);
-      targetPile = cellAtDrop ? pileOnCell(cellAtDrop) : null;
-    }
+    // The snap is cell-based, so the drop cell matches the snap cell. Look up
+    // the pile on that cell directly — dropTarget hit-testing fails when the
+    // snap lifts the preview above the destination's pieces.
+    const cellAtDrop = grid.worldToCell(event.world);
+    const targetPile: Pile | null = cellAtDrop ? pileOnCell(cellAtDrop) : null;
 
     if (targetPile) {
       targetPile.pieces.push(...slicePieces);

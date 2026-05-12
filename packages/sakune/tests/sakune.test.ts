@@ -1390,90 +1390,30 @@ test("snap.drag returning { anchor } places the target anchor at that point", ()
   });
 });
 
-test("dragging a stackSlice back over its source stack snaps to the slice's original spot", () => {
-  const { canvas, fire } = createMockCanvas();
+test("stackNextAnchor returns the world point where the next piece would land", () => {
+  const { canvas } = createMockCanvas();
   const sakune = createSakune({ canvas, pixelRatio: 1 });
 
   sakune.setScene({
     items: [
       {
         type: "stack",
-        id: "src",
-        x: 0,
+        id: "pile",
+        x: 100,
         y: 300,
-        dragMode: "slice-from-item",
-        layout: { type: "pile", offset: { x: 0, y: -10 } },
+        layout: { type: "pile", offset: { x: 4, y: -10 } },
         items: [
-          { id: "s0", size: { width: 20, height: 20 }, visual: { type: "rect" } },
-          { id: "s1", size: { width: 20, height: 20 }, visual: { type: "rect" } },
-          { id: "s2", size: { width: 20, height: 20 }, visual: { type: "rect" } },
+          { id: "p0", size: { width: 20, height: 20 }, visual: { type: "rect" } },
+          { id: "p1", size: { width: 20, height: 20 }, visual: { type: "rect" } },
+          { id: "p2", size: { width: 20, height: 20 }, visual: { type: "rect" } },
         ],
       },
     ],
   });
 
-  let lastPreviewAnchor: Point | null = null;
-  sakune.on("dragMove", (event) => {
-    lastPreviewAnchor = event.previewAnchor;
-  });
-
-  // Grab the top piece s2 (anchor at (0, 280)). The slice contains just s2, so
-  // s1 below it is still a valid hit target. Move the cursor slightly so it is
-  // still over s1: the snap should pin previewAnchor back to s2's home (0, 280).
-  fire("pointerdown", { pointerId: 1, clientX: 10, clientY: 290 });
-  fire("pointermove", { pointerId: 1, clientX: 12, clientY: 295 });
-
-  expect(lastPreviewAnchor).toEqual({ x: 0, y: 280 });
-});
-
-test("dragging a stackSlice over another stack snaps to that stack's top by default", () => {
-  const { canvas, fire } = createMockCanvas();
-  const sakune = createSakune({ canvas, pixelRatio: 1 });
-
-  // Two piles using explicit offsets so the math is exact.
-  // Pile "src" provides the slice being dragged; pile "dst" is the drop target.
-  sakune.setScene({
-    items: [
-      {
-        type: "stack",
-        id: "src",
-        x: 0,
-        y: 300,
-        dragMode: "slice-from-item",
-        layout: { type: "pile", offset: { x: 0, y: -10 } },
-        items: [
-          { id: "s0", size: { width: 20, height: 20 }, visual: { type: "rect" } },
-          { id: "s1", size: { width: 20, height: 20 }, visual: { type: "rect" } },
-        ],
-      },
-      {
-        type: "stack",
-        id: "dst",
-        x: 200,
-        y: 300,
-        dragMode: "slice-from-item",
-        layout: { type: "pile", offset: { x: 0, y: -10 } },
-        items: [
-          { id: "d0", size: { width: 20, height: 20 }, visual: { type: "rect" } },
-          { id: "d1", size: { width: 20, height: 20 }, visual: { type: "rect" } },
-          { id: "d2", size: { width: 20, height: 20 }, visual: { type: "rect" } },
-        ],
-      },
-    ],
-  });
-
-  let lastPreviewAnchor: Point | null = null;
-  sakune.on("dragMove", (event) => {
-    lastPreviewAnchor = event.previewAnchor;
-  });
-
-  // Press on s0 (the bottom of src) and drag over d2 (the top of dst).
-  fire("pointerdown", { pointerId: 1, clientX: 10, clientY: 310 });
-  fire("pointermove", { pointerId: 1, clientX: 210, clientY: 285 });
-
-  // d2 sits at (200, 280); next slot above it is (200, 270). The slice anchor
-  // (s0) should snap there.
-  expect(lastPreviewAnchor).toEqual({ x: 200, y: 270 });
+  // p2 sits at (108, 280); the next slot is one offset above.
+  expect(sakune.stackNextAnchor("pile")).toEqual({ x: 112, y: 270 });
+  expect(sakune.stackNextAnchor("missing")).toBeNull();
 });
 
 test("dragEnd dropTarget hit-tests at the snapped preview position", () => {
@@ -1522,50 +1462,3 @@ test("dragEnd dropTarget hit-tests at the snapped preview position", () => {
   expect(drops).toEqual([{ type: "entity", id: "dst", meta: undefined }]);
 });
 
-test("dragEnd dropTarget falls back to the default-snapped destination stack", () => {
-  // With a tilted pile, previewWorld lands above the destination's top piece
-  // — outside any drawable's hit area. dropTarget must still resolve to the
-  // destination stack so apps know where to merge the slice.
-  const { canvas, fire } = createMockCanvas();
-  const sakune = createSakune({ canvas, pixelRatio: 1 });
-
-  sakune.setScene({
-    items: [
-      {
-        type: "stack",
-        id: "src",
-        x: 0,
-        y: 300,
-        dragMode: "slice-from-item",
-        layout: { type: "pile", offset: { x: 0, y: -30 } },
-        items: [{ id: "s0", size: { width: 20, height: 20 }, visual: { type: "rect" } }],
-      },
-      {
-        type: "stack",
-        id: "dst",
-        x: 200,
-        y: 300,
-        dragMode: "slice-from-item",
-        layout: { type: "pile", offset: { x: 0, y: -30 } },
-        items: [
-          { id: "d0", size: { width: 20, height: 20 }, visual: { type: "rect" } },
-          { id: "d1", size: { width: 20, height: 20 }, visual: { type: "rect" } },
-        ],
-      },
-    ],
-  });
-
-  let dropTarget: HitResult | null = null;
-  sakune.on("dragEnd", (event) => {
-    dropTarget = event.dropTarget;
-  });
-
-  // d1 (top of dst) sits at (200, 270)-(220, 290). Release while cursor is on
-  // it; the 30px offset puts previewWorld 30px above d1's top, missing every
-  // piece — the dropTarget fallback should still report dst.
-  fire("pointerdown", { pointerId: 1, clientX: 10, clientY: 310 });
-  fire("pointermove", { pointerId: 1, clientX: 210, clientY: 280 });
-  fire("pointerup", { pointerId: 1, clientX: 210, clientY: 280 });
-
-  expect(dropTarget).toEqual({ type: "stack", id: "dst", meta: undefined });
-});

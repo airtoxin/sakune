@@ -193,6 +193,10 @@ export type Sakune<TMeta = unknown> = {
     handler: (event: Extract<SakuneEvent<TMeta>, { type: TType }>) => void,
   ): () => void;
   hitTest(point: Point, options?: HitTestOptions): HitResult<TMeta> | null;
+  // World position where a new piece appended to this stack would land. Apps
+  // use this from a snap.drag resolver to express "snap the slice to the top
+  // of this stack" without re-deriving the per-piece offset.
+  stackNextAnchor(stackId: string): Point | null;
 };
 
 export type Drawable<TMeta = unknown> = {
