@@ -96,13 +96,6 @@ function findPile(id: string): Pile | undefined {
   return piles.find((pile) => pile.id === id);
 }
 
-function bringPileToTop(pile: Pile): void {
-  const index = piles.indexOf(pile);
-  if (index < 0 || index === piles.length - 1) return;
-  piles.splice(index, 1);
-  piles.push(pile);
-}
-
 function removeEmptyPiles(): void {
   for (let i = piles.length - 1; i >= 0; i--) {
     const pile = piles[i];
@@ -276,7 +269,7 @@ function buildScene(): SakuneScene<Meta> {
     })),
   ];
 
-  for (const pile of piles) {
+  for (const pile of [...piles].sort((a, b) => a.y - b.y)) {
     if (pile.pieces.length === 0) continue;
     items.push({
       type: "stack",
@@ -339,7 +332,6 @@ sakune.on("dragEnd", (event) => {
 
     if (targetPile) {
       targetPile.pieces.push(...slicePieces);
-      bringPileToTop(targetPile);
     } else {
       piles.push({
         id: newPileId(),
