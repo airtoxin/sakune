@@ -1,6 +1,6 @@
-# sakune
+# @tideform/render
 
-軽量な 2.5D 卓上レンダリングエンジン。
+Tideform の 2.5D 卓上レンダラー本体。
 
 詳細は [リポジトリトップの README](../../README.md) を参照してください。
 

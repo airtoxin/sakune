@@ -9,14 +9,16 @@ import type {
   HitResult,
   HitTestOptions,
   Point,
-  Sakune,
-  SakuneEvent,
-  SakuneOptions,
-  SakuneScene,
+  Renderer,
+  RendererEvent,
+  RendererOptions,
+  Scene,
 } from "./types.ts";
 
 type EventListeners<TMeta> = {
-  [K in SakuneEvent<TMeta>["type"]]: Set<(event: Extract<SakuneEvent<TMeta>, { type: K }>) => void>;
+  [K in RendererEvent<TMeta>["type"]]: Set<
+    (event: Extract<RendererEvent<TMeta>, { type: K }>) => void
+  >;
 };
 
 type PointerSession<TMeta> = {
@@ -79,11 +81,11 @@ function defaultPixelRatio(): number {
   return typeof value === "number" && value > 0 ? value : 1;
 }
 
-export function createSakune<TMeta = unknown>(options: SakuneOptions<TMeta>): Sakune<TMeta> {
+export function createRenderer<TMeta = unknown>(options: RendererOptions<TMeta>): Renderer<TMeta> {
   const canvas = options.canvas;
   const ctx = canvas.getContext("2d");
   if (!ctx) {
-    throw new Error("[sakune] Failed to acquire 2D rendering context.");
+    throw new Error("[tideform] Failed to acquire 2D rendering context.");
   }
 
   const pixelRatio = options.pixelRatio ?? defaultPixelRatio();
@@ -191,10 +193,12 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions<TMeta>): Sa
     });
   };
 
-  function emit<K extends SakuneEvent<TMeta>["type"]>(
-    event: Extract<SakuneEvent<TMeta>, { type: K }>,
+  function emit<K extends RendererEvent<TMeta>["type"]>(
+    event: Extract<RendererEvent<TMeta>, { type: K }>,
   ): void {
-    const set = listeners[event.type] as Set<(e: Extract<SakuneEvent<TMeta>, { type: K }>) => void>;
+    const set = listeners[event.type] as Set<
+      (e: Extract<RendererEvent<TMeta>, { type: K }>) => void
+    >;
     for (const handler of set) handler(event);
   }
 
@@ -391,7 +395,7 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions<TMeta>): Sa
   canvas.addEventListener("pointercancel", onPointerCancel);
 
   return {
-    setScene(scene: SakuneScene<TMeta>): void {
+    setScene(scene: Scene<TMeta>): void {
       drawables = flattenScene(scene);
       invalidate();
     },
@@ -418,12 +422,12 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions<TMeta>): Sa
       }
     },
 
-    on<TType extends SakuneEvent<TMeta>["type"]>(
+    on<TType extends RendererEvent<TMeta>["type"]>(
       type: TType,
-      handler: (event: Extract<SakuneEvent<TMeta>, { type: TType }>) => void,
+      handler: (event: Extract<RendererEvent<TMeta>, { type: TType }>) => void,
     ): () => void {
       const set = listeners[type] as Set<
-        (event: Extract<SakuneEvent<TMeta>, { type: TType }>) => void
+        (event: Extract<RendererEvent<TMeta>, { type: TType }>) => void
       >;
       set.add(handler);
       return () => {

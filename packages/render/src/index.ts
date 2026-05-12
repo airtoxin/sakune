@@ -1,4 +1,4 @@
-export { createSakune } from "./sakune.ts";
+export { createRenderer } from "./render.ts";
 export type {
   DragSnapContext,
   DragSnapModifiers,
@@ -9,11 +9,11 @@ export type {
   Point,
   RenderEntity,
   RenderStack,
-  Sakune,
-  SakuneEvent,
-  SakuneOptions,
-  SakuneScene,
-  SakuneSnapOptions,
+  Renderer,
+  RendererEvent,
+  RendererOptions,
+  Scene,
+  SnapOptions,
   SceneItem,
   Size,
   StackDragMode,

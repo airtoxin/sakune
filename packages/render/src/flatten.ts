@@ -1,4 +1,4 @@
-import type { Drawable, Point, SakuneScene, SceneItem, Size, StackItem, Visual } from "./types.ts";
+import type { Drawable, Point, Scene, SceneItem, Size, StackItem, Visual } from "./types.ts";
 
 // 80° in math coords keeps stacks visibly leaning to upper-right while staying
 // clear of every neighbor-cell direction on square / flat-top hex / pointy-top
@@ -38,7 +38,7 @@ function sortSceneItems<TMeta>(items: SceneItem<TMeta>[]): SceneItem<TMeta>[] {
   });
 }
 
-export function flattenScene<TMeta>(scene: SakuneScene<TMeta>): Drawable<TMeta>[] {
+export function flattenScene<TMeta>(scene: Scene<TMeta>): Drawable<TMeta>[] {
   const drawables: Drawable<TMeta>[] = [];
   let order = 0;
 
