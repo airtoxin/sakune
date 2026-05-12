@@ -1461,4 +1461,3 @@ test("dragEnd dropTarget hit-tests at the snapped preview position", () => {
 
   expect(drops).toEqual([{ type: "entity", id: "dst", meta: undefined }]);
 });
-

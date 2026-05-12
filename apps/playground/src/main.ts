@@ -1,5 +1,11 @@
 import "./style.css";
-import { createSakune, type HitResult, type SakuneScene, type SceneItem } from "sakune";
+import {
+  createSakune,
+  type HitResult,
+  type Sakune,
+  type SakuneScene,
+  type SceneItem,
+} from "sakune";
 import { squareGrid } from "sakune/boards";
 
 type Meta =
@@ -132,7 +138,10 @@ function pileOnCell(cell: { row: number; col: number }): Pile | null {
   return null;
 }
 
-const sakune = createSakune<Meta>({
+// Forward-declare so the snap.drag closure can call back into the instance —
+// the resolver only runs after createSakune has returned and assigned this.
+let sakune: Sakune<Meta>;
+sakune = createSakune<Meta>({
   canvas,
   snap: {
     drag: ({ target, world, anchor }) => {

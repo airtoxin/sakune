@@ -129,9 +129,7 @@ export type DragSnapContext<TMeta = unknown> = {
 
 export type DragSnapResult = Point | { anchor: Point } | null | undefined;
 
-export type DragSnapResolver<TMeta = unknown> = (
-  context: DragSnapContext<TMeta>,
-) => DragSnapResult;
+export type DragSnapResolver<TMeta = unknown> = (context: DragSnapContext<TMeta>) => DragSnapResult;
 
 export type SakuneSnapOptions<TMeta = unknown> = {
   drag?: DragSnapResolver<TMeta>;

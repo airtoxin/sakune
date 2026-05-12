@@ -1,12 +1,4 @@
-import type {
-  Drawable,
-  Point,
-  SakuneScene,
-  SceneItem,
-  Size,
-  StackItem,
-  Visual,
-} from "./types.ts";
+import type { Drawable, Point, SakuneScene, SceneItem, Size, StackItem, Visual } from "./types.ts";
 
 // 80° in math coords keeps stacks visibly leaning to upper-right while staying
 // clear of every neighbor-cell direction on square / flat-top hex / pointy-top
@@ -67,8 +59,7 @@ export function flattenScene<TMeta>(scene: SakuneScene<TMeta>): Drawable<TMeta>[
     }
 
     const first = item.items[0];
-    const offset =
-      item.layout?.offset ?? (first ? defaultStackOffset(first) : { x: 0, y: 0 });
+    const offset = item.layout?.offset ?? (first ? defaultStackOffset(first) : { x: 0, y: 0 });
     const dragMode = item.dragMode ?? "none";
     const stackDraggable = dragMode !== "none";
     item.items.forEach((stackItem, index) => {
