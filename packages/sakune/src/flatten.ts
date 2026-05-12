@@ -1,6 +1,11 @@
 import type { Drawable, SakuneScene } from "./types.ts";
 
-const DEFAULT_PILE_OFFSET = { x: 0, y: -4 };
+const DEFAULT_PILE_STEP = 4;
+const DEFAULT_PILE_ANGLE_RAD = (80 * Math.PI) / 180;
+const DEFAULT_PILE_OFFSET = {
+  x: DEFAULT_PILE_STEP * Math.cos(DEFAULT_PILE_ANGLE_RAD),
+  y: -DEFAULT_PILE_STEP * Math.sin(DEFAULT_PILE_ANGLE_RAD),
+};
 
 export function flattenScene<TMeta>(scene: SakuneScene<TMeta>): Drawable<TMeta>[] {
   const drawables: Drawable<TMeta>[] = [];

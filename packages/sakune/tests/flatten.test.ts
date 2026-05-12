@@ -81,7 +81,7 @@ test("flattenScene applies stack offset per index", () => {
   });
 });
 
-test("flattenScene defaults stack offset to (0, -4)", () => {
+test("flattenScene defaults stack offset to an 80-degree tilt", () => {
   const drawables = flattenScene({
     items: [
       {
@@ -97,7 +97,11 @@ test("flattenScene defaults stack offset to (0, -4)", () => {
     ],
   });
 
-  expect(drawables[1]).toMatchObject({ x: 0, y: -4 });
+  const angle = (80 * Math.PI) / 180;
+  expect(drawables[1]).toMatchObject({
+    x: 4 * Math.cos(angle),
+    y: -4 * Math.sin(angle),
+  });
 });
 
 test("flattenScene records dragMode and stack metadata on every stack item", () => {
