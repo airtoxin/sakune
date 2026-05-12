@@ -1475,6 +1475,8 @@ test("dragging a stackSlice over another stack snaps to that stack's top by defa
   // (s0) should snap there.
   expect(lastPreviewAnchor).toEqual({ x: 200, y: 270 });
 });
+
+test("dragEnd dropTarget hit-tests at the snapped preview position", () => {
   const { canvas, fire } = createMockCanvas();
   const sakune = createSakune({
     canvas,
@@ -1518,4 +1520,52 @@ test("dragging a stackSlice over another stack snaps to that stack's top by defa
   fire("pointerup", { pointerId: 1, clientX: 400, clientY: 400 });
 
   expect(drops).toEqual([{ type: "entity", id: "dst", meta: undefined }]);
+});
+
+test("dragEnd dropTarget falls back to the default-snapped destination stack", () => {
+  // With a tilted pile, previewWorld lands above the destination's top piece
+  // — outside any drawable's hit area. dropTarget must still resolve to the
+  // destination stack so apps know where to merge the slice.
+  const { canvas, fire } = createMockCanvas();
+  const sakune = createSakune({ canvas, pixelRatio: 1 });
+
+  sakune.setScene({
+    items: [
+      {
+        type: "stack",
+        id: "src",
+        x: 0,
+        y: 300,
+        dragMode: "slice-from-item",
+        layout: { type: "pile", offset: { x: 0, y: -30 } },
+        items: [{ id: "s0", size: { width: 20, height: 20 }, visual: { type: "rect" } }],
+      },
+      {
+        type: "stack",
+        id: "dst",
+        x: 200,
+        y: 300,
+        dragMode: "slice-from-item",
+        layout: { type: "pile", offset: { x: 0, y: -30 } },
+        items: [
+          { id: "d0", size: { width: 20, height: 20 }, visual: { type: "rect" } },
+          { id: "d1", size: { width: 20, height: 20 }, visual: { type: "rect" } },
+        ],
+      },
+    ],
+  });
+
+  let dropTarget: HitResult | null = null;
+  sakune.on("dragEnd", (event) => {
+    dropTarget = event.dropTarget;
+  });
+
+  // d1 (top of dst) sits at (200, 270)-(220, 290). Release while cursor is on
+  // it; the 30px offset puts previewWorld 30px above d1's top, missing every
+  // piece — the dropTarget fallback should still report dst.
+  fire("pointerdown", { pointerId: 1, clientX: 10, clientY: 310 });
+  fire("pointermove", { pointerId: 1, clientX: 210, clientY: 280 });
+  fire("pointerup", { pointerId: 1, clientX: 210, clientY: 280 });
+
+  expect(dropTarget).toEqual({ type: "stack", id: "dst", meta: undefined });
 });

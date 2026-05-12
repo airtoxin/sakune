@@ -90,6 +90,11 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions<TMeta>): Sa
   let destroyed = false;
   let pointerSession: PointerSession<TMeta> | null = null;
   let activeDrag: ActiveDrag<TMeta> | null = null;
+  // When defaultStackSnap pins the preview to another stack's top we remember
+  // that stack so onPointerUp can hand it back as the drop target. The
+  // hitTest at previewWorld misses, because previewWorld is *above* the top
+  // piece by one stack step.
+  let lastSnapDestStack: { id: string; meta: TMeta | undefined } | null = null;
   const dragSnapResolver: DragSnapResolver<TMeta> | null = options.snap?.drag ?? null;
 
   const anchorToWorld = (anchor: Point, startWorld: Point, targetAnchor: Point): Point => ({
@@ -106,15 +111,26 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions<TMeta>): Sa
     startWorld: Point,
     targetAnchor: Point,
   ): Point | null => {
-    if (target.type !== "stackSlice") return null;
+    if (target.type !== "stackSlice") {
+      lastSnapDestStack = null;
+      return null;
+    }
     const hit = hitTestDrawables(drawables, world, (d) => isInDragGroup(d, target));
-    if (!hit || hit.stackId === undefined) return null;
+    if (!hit || hit.stackId === undefined) {
+      lastSnapDestStack = null;
+      return null;
+    }
     let nextAnchor: Point;
     if (hit.stackId === target.stackId) {
+      lastSnapDestStack = null;
       nextAnchor = targetAnchor;
     } else {
       const top = topOfStack(hit.stackId, drawables);
-      if (!top || !top.stackOffset) return null;
+      if (!top || !top.stackOffset) {
+        lastSnapDestStack = null;
+        return null;
+      }
+      lastSnapDestStack = { id: hit.stackId, meta: hit.stackMeta };
       nextAnchor = {
         x: top.x + top.stackOffset.x,
         y: top.y + top.stackOffset.y,
@@ -144,6 +160,7 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions<TMeta>): Sa
       };
       const result = dragSnapResolver(context);
       if (result) {
+        lastSnapDestStack = null;
         if ("anchor" in result) return anchorToWorld(result.anchor, startWorld, targetAnchor);
         return result;
       }
@@ -231,6 +248,7 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions<TMeta>): Sa
     const hit = hitTestDrawables(drawables, world);
     const dragTarget = hit && hit.draggable === true ? toDragTarget(hit, drawables) : null;
     const targetAnchor = dragTarget ? computeTargetAnchor(dragTarget, drawables) : null;
+    lastSnapDestStack = null;
     pointerSession = {
       pointerId: event.pointerId,
       dragTarget,
@@ -341,9 +359,13 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions<TMeta>): Sa
         x: anchor.x + (previewWorld.x - pointerSession.startWorld.x),
         y: anchor.y + (previewWorld.y - pointerSession.startWorld.y),
       };
-      const dropTarget = toHitResult(
+      let dropTarget = toHitResult(
         hitTestDrawables(drawables, previewWorld, (d) => isInDragGroup(d, target)),
       );
+      if (!dropTarget && lastSnapDestStack !== null) {
+        dropTarget = { type: "stack", id: lastSnapDestStack.id, meta: lastSnapDestStack.meta };
+      }
+      lastSnapDestStack = null;
       emit({
         type: "dragEnd",
         screen,
@@ -401,6 +423,7 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions<TMeta>): Sa
     }
     pointerSession = null;
     activeDrag = null;
+    lastSnapDestStack = null;
     if (wasDragging) invalidate();
   };
 

@@ -271,15 +271,14 @@ sakune.on("dragEnd", (event) => {
     const slicePieces = sourcePile.pieces.slice(event.target.fromIndex);
     sourcePile.pieces = sourcePile.pieces.slice(0, event.target.fromIndex);
 
-    // When the drop lands on a grid cell that already holds a pile, stack
-    // onto it even if the snapped preview hovered above the dropTarget hit.
-    // Don't filter the source out — dropping the slice back on its own cell
-    // should reunite it with the rest of the pile.
-    const cellAtDrop = grid.worldToCell(event.world);
-    let targetPile: Pile | null = cellAtDrop ? pileOnCell(cellAtDrop) : null;
+    // Prefer Sakune's dropTarget — it survives the tilted-stack case where
+    // the cursor's cell differs from the pile's anchor cell. Fall back to a
+    // cell scan only when the library didn't identify a target stack.
+    const targetPileId = dropTargetPileId(event.dropTarget);
+    let targetPile: Pile | null = targetPileId ? (findPile(targetPileId) ?? null) : null;
     if (!targetPile) {
-      const targetPileId = dropTargetPileId(event.dropTarget);
-      targetPile = targetPileId ? (findPile(targetPileId) ?? null) : null;
+      const cellAtDrop = grid.worldToCell(event.world);
+      targetPile = cellAtDrop ? pileOnCell(cellAtDrop) : null;
     }
 
     if (targetPile) {
