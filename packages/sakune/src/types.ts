@@ -123,12 +123,13 @@ export type DragSnapContext<TMeta = unknown> = {
   delta: Point;
   startWorld: Point;
   previousPreviewWorld: Point;
+  anchor: Point;
   modifiers: DragSnapModifiers;
 };
 
-export type DragSnapResolver<TMeta = unknown> = (
-  context: DragSnapContext<TMeta>,
-) => Point | null | undefined;
+export type DragSnapResult = Point | { anchor: Point } | null | undefined;
+
+export type DragSnapResolver<TMeta = unknown> = (context: DragSnapContext<TMeta>) => DragSnapResult;
 
 export type SakuneSnapOptions<TMeta = unknown> = {
   drag?: DragSnapResolver<TMeta>;
@@ -146,6 +147,8 @@ export type SakuneEvent<TMeta = unknown> =
       screen: Point;
       world: Point;
       previewWorld: Point;
+      anchor: Point;
+      previewAnchor: Point;
       target: HitResult<TMeta>;
     }
   | {
@@ -153,6 +156,8 @@ export type SakuneEvent<TMeta = unknown> =
       screen: Point;
       world: Point;
       previewWorld: Point;
+      anchor: Point;
+      previewAnchor: Point;
       delta: Point;
       target: HitResult<TMeta>;
     }
@@ -161,6 +166,8 @@ export type SakuneEvent<TMeta = unknown> =
       screen: Point;
       world: Point;
       previewWorld: Point;
+      anchor: Point;
+      previewAnchor: Point;
       target: HitResult<TMeta>;
       dropTarget: HitResult<TMeta> | null;
     };
@@ -184,6 +191,10 @@ export type Sakune<TMeta = unknown> = {
     handler: (event: Extract<SakuneEvent<TMeta>, { type: TType }>) => void,
   ): () => void;
   hitTest(point: Point, options?: HitTestOptions): HitResult<TMeta> | null;
+  // World position where a new piece appended to this stack would land. Apps
+  // use this from a snap.drag resolver to express "snap the slice to the top
+  // of this stack" without re-deriving the per-piece offset.
+  stackNextAnchor(stackId: string): Point | null;
 };
 
 export type Drawable<TMeta = unknown> = {
@@ -192,6 +203,7 @@ export type Drawable<TMeta = unknown> = {
   stackIndex?: number;
   stackDragMode?: StackDragMode;
   stackMeta?: TMeta;
+  stackOffset?: Point;
   x: number;
   y: number;
   size: Size;

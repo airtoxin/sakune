@@ -27,7 +27,46 @@ type PointerSession<TMeta> = {
   lastWorld: Point;
   lastPreviewWorld: Point;
   dragStarted: boolean;
+  targetAnchor: Point | null;
 };
+
+function computeTargetAnchor<TMeta>(
+  target: HitResult<TMeta>,
+  drawables: Drawable<TMeta>[],
+): Point | null {
+  switch (target.type) {
+    case "entity": {
+      const d = drawables.find((x) => x.id === target.id && x.stackId === undefined);
+      return d ? { x: d.x, y: d.y } : null;
+    }
+    case "stack": {
+      const d = drawables.find((x) => x.stackId === target.id && (x.stackIndex ?? 0) === 0);
+      return d ? { x: d.x, y: d.y } : null;
+    }
+    case "stackItem": {
+      const d = drawables.find((x) => x.id === target.id);
+      return d ? { x: d.x, y: d.y } : null;
+    }
+    case "stackSlice": {
+      const d = drawables.find(
+        (x) => x.stackId === target.stackId && (x.stackIndex ?? -1) === target.fromIndex,
+      );
+      return d ? { x: d.x, y: d.y } : null;
+    }
+  }
+}
+
+function stackTopDrawable<TMeta>(
+  stackId: string,
+  drawables: Drawable<TMeta>[],
+): Drawable<TMeta> | null {
+  let top: Drawable<TMeta> | null = null;
+  for (const d of drawables) {
+    if (d.stackId !== stackId) continue;
+    if (top === null || (d.stackIndex ?? -1) > (top.stackIndex ?? -1)) top = d;
+  }
+  return top;
+}
 
 type ActiveDrag<TMeta> = {
   target: HitResult<TMeta>;
@@ -56,12 +95,27 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions<TMeta>): Sa
   let activeDrag: ActiveDrag<TMeta> | null = null;
   const dragSnapResolver: DragSnapResolver<TMeta> | null = options.snap?.drag ?? null;
 
+  const anchorToWorld = (anchor: Point, startWorld: Point, targetAnchor: Point): Point => ({
+    x: anchor.x + (startWorld.x - targetAnchor.x),
+    y: anchor.y + (startWorld.y - targetAnchor.y),
+  });
+
+  const stackNextAnchor = (stackId: string): Point | null => {
+    const top = stackTopDrawable(stackId, drawables);
+    if (!top || !top.stackOffset) return null;
+    return {
+      x: top.x + top.stackOffset.x,
+      y: top.y + top.stackOffset.y,
+    };
+  };
+
   const resolvePreview = (
     target: HitResult<TMeta>,
     world: Point,
     delta: Point,
     startWorld: Point,
     previousPreviewWorld: Point,
+    targetAnchor: Point,
     modifiers: DragSnapModifiers,
   ): Point => {
     if (dragSnapResolver === null) return world;
@@ -71,10 +125,13 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions<TMeta>): Sa
       delta,
       startWorld,
       previousPreviewWorld,
+      anchor: targetAnchor,
       modifiers,
     };
-    const snap = dragSnapResolver(context);
-    return snap ?? world;
+    const result = dragSnapResolver(context);
+    if (!result) return world;
+    if ("anchor" in result) return anchorToWorld(result.anchor, startWorld, targetAnchor);
+    return result;
   };
 
   const modifiersFromEvent = (event: PointerEvent): DragSnapModifiers => ({
@@ -154,6 +211,7 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions<TMeta>): Sa
     const world = screen;
     const hit = hitTestDrawables(drawables, world);
     const dragTarget = hit && hit.draggable === true ? toDragTarget(hit, drawables) : null;
+    const targetAnchor = dragTarget ? computeTargetAnchor(dragTarget, drawables) : null;
     pointerSession = {
       pointerId: event.pointerId,
       dragTarget,
@@ -162,6 +220,7 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions<TMeta>): Sa
       lastWorld: world,
       lastPreviewWorld: world,
       dragStarted: false,
+      targetAnchor,
     };
     if (typeof canvas.setPointerCapture === "function") {
       try {
@@ -176,6 +235,7 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions<TMeta>): Sa
     if (!pointerSession || pointerSession.pointerId !== event.pointerId) return;
     const target = pointerSession.dragTarget;
     if (target === null) return;
+    const anchor = pointerSession.targetAnchor ?? pointerSession.startWorld;
 
     const screen = screenFromEvent(event);
     const world = screen;
@@ -196,6 +256,8 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions<TMeta>): Sa
         screen: pointerSession.startScreen,
         world: pointerSession.startWorld,
         previewWorld: pointerSession.startWorld,
+        anchor,
+        previewAnchor: anchor,
         target,
       });
     }
@@ -206,6 +268,7 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions<TMeta>): Sa
       delta,
       pointerSession.startWorld,
       pointerSession.lastPreviewWorld,
+      anchor,
       modifiersFromEvent(event),
     );
 
@@ -216,11 +279,17 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions<TMeta>): Sa
     pointerSession.lastWorld = world;
     pointerSession.lastPreviewWorld = previewWorld;
     invalidate();
+    const previewAnchor = {
+      x: anchor.x + (previewWorld.x - pointerSession.startWorld.x),
+      y: anchor.y + (previewWorld.y - pointerSession.startWorld.y),
+    };
     emit({
       type: "dragMove",
       screen,
       world,
       previewWorld,
+      anchor,
+      previewAnchor,
       delta,
       target,
     });
@@ -235,6 +304,7 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions<TMeta>): Sa
     const wasDragging = pointerSession.dragStarted === true && target !== null;
 
     if (wasDragging && target !== null) {
+      const anchor = pointerSession.targetAnchor ?? pointerSession.startWorld;
       const delta = {
         x: world.x - pointerSession.lastWorld.x,
         y: world.y - pointerSession.lastWorld.y,
@@ -245,8 +315,13 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions<TMeta>): Sa
         delta,
         pointerSession.startWorld,
         pointerSession.lastPreviewWorld,
+        anchor,
         modifiersFromEvent(event),
       );
+      const previewAnchor = {
+        x: anchor.x + (previewWorld.x - pointerSession.startWorld.x),
+        y: anchor.y + (previewWorld.y - pointerSession.startWorld.y),
+      };
       const dropTarget = toHitResult(
         hitTestDrawables(drawables, previewWorld, (d) => isInDragGroup(d, target)),
       );
@@ -255,6 +330,8 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions<TMeta>): Sa
         screen,
         world,
         previewWorld,
+        anchor,
+        previewAnchor,
         target,
         dropTarget,
       });
@@ -287,11 +364,18 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions<TMeta>): Sa
     if (wasDragging && target !== null) {
       const screen = screenFromEvent(event);
       const world = screen;
+      const anchor = pointerSession.targetAnchor ?? pointerSession.startWorld;
+      const previewAnchor = {
+        x: anchor.x + (pointerSession.lastPreviewWorld.x - pointerSession.startWorld.x),
+        y: anchor.y + (pointerSession.lastPreviewWorld.y - pointerSession.startWorld.y),
+      };
       emit({
         type: "dragEnd",
         screen,
         world,
         previewWorld: pointerSession.lastPreviewWorld,
+        anchor,
+        previewAnchor,
         target,
         dropTarget: null,
       });
@@ -354,5 +438,7 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions<TMeta>): Sa
           : undefined;
       return toHitResult(hitTestDrawables(drawables, point, exclude));
     },
+
+    stackNextAnchor,
   };
 }

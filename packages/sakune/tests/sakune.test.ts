@@ -1307,6 +1307,115 @@ test("dragged entity renders at the snapped preview position", () => {
   expect(positions).toEqual([{ x: 40, y: -10 }]);
 });
 
+test("drag events include the target anchor and its snap-adjusted preview", () => {
+  const { canvas, fire } = createMockCanvas();
+  const sakune = createSakune({
+    canvas,
+    pixelRatio: 1,
+    snap: { drag: () => null },
+  });
+
+  sakune.setScene({
+    items: [
+      {
+        type: "entity",
+        id: "src",
+        x: 40,
+        y: 60,
+        size: { width: 20, height: 20 },
+        visual: { type: "rect" },
+        draggable: true,
+      },
+    ],
+  });
+
+  const seen: { type: string; anchor: Point; previewAnchor: Point }[] = [];
+  sakune.on("dragStart", (e) => {
+    seen.push({ type: "dragStart", anchor: e.anchor, previewAnchor: e.previewAnchor });
+  });
+  sakune.on("dragMove", (e) => {
+    seen.push({ type: "dragMove", anchor: e.anchor, previewAnchor: e.previewAnchor });
+  });
+  sakune.on("dragEnd", (e) => {
+    seen.push({ type: "dragEnd", anchor: e.anchor, previewAnchor: e.previewAnchor });
+  });
+
+  fire("pointerdown", { pointerId: 1, clientX: 50, clientY: 70 });
+  fire("pointermove", { pointerId: 1, clientX: 110, clientY: 130 });
+  fire("pointerup", { pointerId: 1, clientX: 110, clientY: 130 });
+
+  expect(seen).toEqual([
+    { type: "dragStart", anchor: { x: 40, y: 60 }, previewAnchor: { x: 40, y: 60 } },
+    { type: "dragMove", anchor: { x: 40, y: 60 }, previewAnchor: { x: 100, y: 120 } },
+    { type: "dragEnd", anchor: { x: 40, y: 60 }, previewAnchor: { x: 100, y: 120 } },
+  ]);
+});
+
+test("snap.drag returning { anchor } places the target anchor at that point", () => {
+  const { canvas, fire } = createMockCanvas();
+  const sakune = createSakune({
+    canvas,
+    pixelRatio: 1,
+    snap: {
+      drag: () => ({ anchor: { x: 500, y: 400 } }),
+    },
+  });
+  sakune.setScene({
+    items: [
+      {
+        type: "entity",
+        id: "src",
+        x: 100,
+        y: 80,
+        size: { width: 20, height: 20 },
+        visual: { type: "rect" },
+        draggable: true,
+      },
+    ],
+  });
+
+  let captured: { previewWorld: Point; previewAnchor: Point } | null = null;
+  sakune.on("dragMove", (event) => {
+    captured = { previewWorld: event.previewWorld, previewAnchor: event.previewAnchor };
+  });
+
+  fire("pointerdown", { pointerId: 1, clientX: 110, clientY: 90 });
+  fire("pointermove", { pointerId: 1, clientX: 200, clientY: 200 });
+
+  // Cursor offset from anchor was (10, 10). With anchor snapped to (500, 400),
+  // the cursor must be at (510, 410) for the offset to hold.
+  expect(captured).toEqual({
+    previewWorld: { x: 510, y: 410 },
+    previewAnchor: { x: 500, y: 400 },
+  });
+});
+
+test("stackNextAnchor returns the world point where the next piece would land", () => {
+  const { canvas } = createMockCanvas();
+  const sakune = createSakune({ canvas, pixelRatio: 1 });
+
+  sakune.setScene({
+    items: [
+      {
+        type: "stack",
+        id: "pile",
+        x: 100,
+        y: 300,
+        layout: { type: "pile", offset: { x: 4, y: -10 } },
+        items: [
+          { id: "p0", size: { width: 20, height: 20 }, visual: { type: "rect" } },
+          { id: "p1", size: { width: 20, height: 20 }, visual: { type: "rect" } },
+          { id: "p2", size: { width: 20, height: 20 }, visual: { type: "rect" } },
+        ],
+      },
+    ],
+  });
+
+  // p2 sits at (108, 280); the next slot is one offset above.
+  expect(sakune.stackNextAnchor("pile")).toEqual({ x: 112, y: 270 });
+  expect(sakune.stackNextAnchor("missing")).toBeNull();
+});
+
 test("dragEnd dropTarget hit-tests at the snapped preview position", () => {
   const { canvas, fire } = createMockCanvas();
   const sakune = createSakune({

@@ -81,7 +81,7 @@ test("flattenScene applies stack offset per index", () => {
   });
 });
 
-test("flattenScene defaults stack offset to (0, -4)", () => {
+test("flattenScene defaults stack offset to 80-degree tilt derived from item size", () => {
   const drawables = flattenScene({
     items: [
       {
@@ -90,14 +90,53 @@ test("flattenScene defaults stack offset to (0, -4)", () => {
         x: 0,
         y: 0,
         items: [
-          { id: "a", size: { width: 10, height: 10 }, visual: { type: "rect" } },
-          { id: "b", size: { width: 10, height: 10 }, visual: { type: "rect" } },
+          { id: "a", size: { width: 50, height: 50 }, visual: { type: "rect" } },
+          { id: "b", size: { width: 50, height: 50 }, visual: { type: "rect" } },
         ],
       },
     ],
   });
 
-  expect(drawables[1]).toMatchObject({ x: 0, y: -4 });
+  const angle = (80 * Math.PI) / 180;
+  const step = 50 * 0.2;
+  expect(drawables[1]).toMatchObject({
+    x: step / Math.tan(angle),
+    y: -step,
+    stackOffset: { x: step / Math.tan(angle), y: -step },
+  });
+});
+
+test("flattenScene default stack offset uses cylinder rim formula", () => {
+  const drawables = flattenScene({
+    items: [
+      {
+        type: "stack",
+        id: "tower",
+        x: 0,
+        y: 0,
+        items: [
+          {
+            id: "p1",
+            size: { width: 56, height: 40 },
+            visual: { type: "cylinder" },
+          },
+          {
+            id: "p2",
+            size: { width: 56, height: 40 },
+            visual: { type: "cylinder" },
+          },
+        ],
+      },
+    ],
+  });
+
+  const ry = Math.min(56 * 0.18, 40 * 0.45);
+  const step = 40 - 2 * ry;
+  const angle = (80 * Math.PI) / 180;
+  expect(drawables[1]).toMatchObject({
+    x: step / Math.tan(angle),
+    y: -step,
+  });
 });
 
 test("flattenScene records dragMode and stack metadata on every stack item", () => {
@@ -153,7 +192,7 @@ test("flattenScene leaves stack items not draggable when dragMode is none", () =
   expect(drawables[1]?.draggable).toBeUndefined();
 });
 
-test("flattenScene assigns global order across mixed items", () => {
+test("flattenScene draws all entities before any stack", () => {
   const drawables = flattenScene({
     items: [
       {
@@ -185,5 +224,35 @@ test("flattenScene assigns global order across mixed items", () => {
     ],
   });
 
-  expect(drawables.map((d) => `${d.id}:${d.order}`)).toEqual(["e1:0", "s1:1", "s2:2", "e2:3"]);
+  expect(drawables.map((d) => `${d.id}:${d.order}`)).toEqual(["e1:0", "e2:1", "s1:2", "s2:3"]);
+});
+
+test("flattenScene sorts stacks back-to-front by anchor y", () => {
+  const drawables = flattenScene({
+    items: [
+      {
+        type: "stack",
+        id: "front",
+        x: 0,
+        y: 200,
+        items: [{ id: "f", size: { width: 10, height: 10 }, visual: { type: "rect" } }],
+      },
+      {
+        type: "stack",
+        id: "back",
+        x: 0,
+        y: 50,
+        items: [{ id: "b", size: { width: 10, height: 10 }, visual: { type: "rect" } }],
+      },
+      {
+        type: "stack",
+        id: "middle",
+        x: 0,
+        y: 120,
+        items: [{ id: "m", size: { width: 10, height: 10 }, visual: { type: "rect" } }],
+      },
+    ],
+  });
+
+  expect(drawables.map((d) => d.id)).toEqual(["b", "m", "f"]);
 });
