@@ -81,7 +81,7 @@ test("flattenScene applies stack offset per index", () => {
   });
 });
 
-test("flattenScene defaults stack offset to an 80-degree tilt", () => {
+test("flattenScene defaults stack offset to a 75-degree tilt", () => {
   const drawables = flattenScene({
     items: [
       {
@@ -97,10 +97,10 @@ test("flattenScene defaults stack offset to an 80-degree tilt", () => {
     ],
   });
 
-  const angle = (80 * Math.PI) / 180;
+  const angle = (75 * Math.PI) / 180;
   expect(drawables[1]).toMatchObject({
-    x: 4 * Math.cos(angle),
-    y: -4 * Math.sin(angle),
+    x: 6 * Math.cos(angle),
+    y: -6 * Math.sin(angle),
   });
 });
 

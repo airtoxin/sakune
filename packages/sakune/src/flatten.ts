@@ -1,7 +1,10 @@
 import type { Drawable, SakuneScene } from "./types.ts";
 
-const DEFAULT_PILE_STEP = 4;
-const DEFAULT_PILE_ANGLE_RAD = (80 * Math.PI) / 180;
+// 75° in math coords keeps 15° clearance from every potential neighbor cell
+// direction across square (90°), flat-top hex (60°/120°), and pointy-top hex
+// (30°/90°/150°) grids, so the stack never aims at an adjacent cell.
+const DEFAULT_PILE_STEP = 6;
+const DEFAULT_PILE_ANGLE_RAD = (75 * Math.PI) / 180;
 const DEFAULT_PILE_OFFSET = {
   x: DEFAULT_PILE_STEP * Math.cos(DEFAULT_PILE_ANGLE_RAD),
   y: -DEFAULT_PILE_STEP * Math.sin(DEFAULT_PILE_ANGLE_RAD),
