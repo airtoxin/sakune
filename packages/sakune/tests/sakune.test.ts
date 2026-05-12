@@ -1390,6 +1390,42 @@ test("snap.drag returning { anchor } places the target anchor at that point", ()
   });
 });
 
+test("dragging a stackSlice back over its source stack snaps to the slice's original spot", () => {
+  const { canvas, fire } = createMockCanvas();
+  const sakune = createSakune({ canvas, pixelRatio: 1 });
+
+  sakune.setScene({
+    items: [
+      {
+        type: "stack",
+        id: "src",
+        x: 0,
+        y: 300,
+        dragMode: "slice-from-item",
+        layout: { type: "pile", offset: { x: 0, y: -10 } },
+        items: [
+          { id: "s0", size: { width: 20, height: 20 }, visual: { type: "rect" } },
+          { id: "s1", size: { width: 20, height: 20 }, visual: { type: "rect" } },
+          { id: "s2", size: { width: 20, height: 20 }, visual: { type: "rect" } },
+        ],
+      },
+    ],
+  });
+
+  let lastPreviewAnchor: Point | null = null;
+  sakune.on("dragMove", (event) => {
+    lastPreviewAnchor = event.previewAnchor;
+  });
+
+  // Grab the top piece s2 (anchor at (0, 280)). The slice contains just s2, so
+  // s1 below it is still a valid hit target. Move the cursor slightly so it is
+  // still over s1: the snap should pin previewAnchor back to s2's home (0, 280).
+  fire("pointerdown", { pointerId: 1, clientX: 10, clientY: 290 });
+  fire("pointermove", { pointerId: 1, clientX: 12, clientY: 295 });
+
+  expect(lastPreviewAnchor).toEqual({ x: 0, y: 280 });
+});
+
 test("dragging a stackSlice over another stack snaps to that stack's top by default", () => {
   const { canvas, fire } = createMockCanvas();
   const sakune = createSakune({ canvas, pixelRatio: 1 });

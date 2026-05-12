@@ -97,8 +97,9 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions<TMeta>): Sa
     y: anchor.y + (startWorld.y - targetAnchor.y),
   });
 
-  // Built-in snap: a stack slice dragged over another stack lands on top of it.
-  // The cursor offset relative to the slice anchor is preserved.
+  // Built-in snap: a stack slice dragged over another stack lands on top of
+  // it; dragging the slice back over its own source stack snaps to the slice's
+  // original spot so the user can put it back without leaving the cell.
   const defaultStackSnap = (
     target: HitResult<TMeta>,
     world: Point,
@@ -107,13 +108,18 @@ export function createSakune<TMeta = unknown>(options: SakuneOptions<TMeta>): Sa
   ): Point | null => {
     if (target.type !== "stackSlice") return null;
     const hit = hitTestDrawables(drawables, world, (d) => isInDragGroup(d, target));
-    if (!hit || hit.stackId === undefined || hit.stackId === target.stackId) return null;
-    const top = topOfStack(hit.stackId, drawables);
-    if (!top || !top.stackOffset) return null;
-    const nextAnchor = {
-      x: top.x + top.stackOffset.x,
-      y: top.y + top.stackOffset.y,
-    };
+    if (!hit || hit.stackId === undefined) return null;
+    let nextAnchor: Point;
+    if (hit.stackId === target.stackId) {
+      nextAnchor = targetAnchor;
+    } else {
+      const top = topOfStack(hit.stackId, drawables);
+      if (!top || !top.stackOffset) return null;
+      nextAnchor = {
+        x: top.x + top.stackOffset.x,
+        y: top.y + top.stackOffset.y,
+      };
+    }
     return anchorToWorld(nextAnchor, startWorld, targetAnchor);
   };
 

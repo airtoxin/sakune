@@ -127,9 +127,8 @@ if (!canvas || !log) {
 const GRID_CELL_SIZE = 56;
 const grid = squareGrid({ x: 320, y: 210, rows: 2, cols: 8, cellSize: GRID_CELL_SIZE });
 
-function pileOnCell(cell: { row: number; col: number }, excludePileId?: string): Pile | null {
+function pileOnCell(cell: { row: number; col: number }): Pile | null {
   for (const pile of piles) {
-    if (pile.id === excludePileId) continue;
     if (pile.pieces.length === 0) continue;
     const c = grid.worldToCell({
       x: pile.x + PIECE_WIDTH / 2,
@@ -147,7 +146,7 @@ const sakune = createSakune<Meta>({
       if (target.type !== "stackSlice") return null;
       const cell = grid.worldToCell(world);
       if (!cell) return null;
-      if (pileOnCell(cell, target.stackId)) return null;
+      if (pileOnCell(cell)) return null;
       const cellTopLeft = grid.cellToWorld(cell);
       return {
         anchor: {
@@ -274,8 +273,10 @@ sakune.on("dragEnd", (event) => {
 
     // When the drop lands on a grid cell that already holds a pile, stack
     // onto it even if the snapped preview hovered above the dropTarget hit.
+    // Don't filter the source out — dropping the slice back on its own cell
+    // should reunite it with the rest of the pile.
     const cellAtDrop = grid.worldToCell(event.world);
-    let targetPile: Pile | null = cellAtDrop ? pileOnCell(cellAtDrop, sourcePile.id) : null;
+    let targetPile: Pile | null = cellAtDrop ? pileOnCell(cellAtDrop) : null;
     if (!targetPile) {
       const targetPileId = dropTargetPileId(event.dropTarget);
       targetPile = targetPileId ? (findPile(targetPileId) ?? null) : null;
