@@ -278,7 +278,10 @@ function buildScene(): SakuneScene<Meta> {
       id: pile.id,
       x: pile.x,
       y: pile.y,
-      layout: { type: "pile", offset: { x: 0, y: PIECE_STACK_OFFSET_Y } },
+      layout: {
+        type: "pile",
+        offset: { x: -PIECE_STACK_OFFSET_Y, y: PIECE_STACK_OFFSET_Y },
+      },
       dragMode: "slice-from-item",
       meta: { type: "stack", stackId: pile.id },
       items: pile.pieces.map(pieceStackItem),
