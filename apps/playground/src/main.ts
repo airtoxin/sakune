@@ -37,7 +37,12 @@ const PIECE_HEIGHT = 40;
 // Stacking by (H - 2*ry) makes each piece's bottom rim land exactly on
 // the next piece's cap, leaving no visible gap.
 const PIECE_CAP_RY = Math.min(PIECE_WIDTH * 0.18, PIECE_HEIGHT * 0.45);
-const PIECE_STACK_OFFSET_Y = Math.round(-(PIECE_HEIGHT - 2 * PIECE_CAP_RY));
+const PIECE_STACK_VERTICAL_STEP = PIECE_HEIGHT - 2 * PIECE_CAP_RY;
+const PIECE_STACK_ANGLE_RAD = (80 * Math.PI) / 180;
+const PIECE_STACK_OFFSET = {
+  x: PIECE_STACK_VERTICAL_STEP / Math.tan(PIECE_STACK_ANGLE_RAD),
+  y: -PIECE_STACK_VERTICAL_STEP,
+};
 
 const deck: Deck = {
   id: "deck",
@@ -163,8 +168,8 @@ const sakune = createSakune<Meta>({
       if (!cell) return null;
       const sourcePile = findPile(target.stackId);
       if (!sourcePile) return null;
-      const sliceX = sourcePile.x;
-      const sliceY = sourcePile.y + PIECE_STACK_OFFSET_Y * target.fromIndex;
+      const sliceX = sourcePile.x + PIECE_STACK_OFFSET.x * target.fromIndex;
+      const sliceY = sourcePile.y + PIECE_STACK_OFFSET.y * target.fromIndex;
 
       const stackTarget = pileOnCell(cell, sourcePile.id);
       let targetSliceX: number;
@@ -172,8 +177,8 @@ const sakune = createSakune<Meta>({
       if (stackTarget) {
         // Land the slice anchor right above the existing pile's top piece
         // so the drag preview shows where pieces will end up after stacking.
-        targetSliceX = stackTarget.x;
-        targetSliceY = stackTarget.y + PIECE_STACK_OFFSET_Y * stackTarget.pieces.length;
+        targetSliceX = stackTarget.x + PIECE_STACK_OFFSET.x * stackTarget.pieces.length;
+        targetSliceY = stackTarget.y + PIECE_STACK_OFFSET.y * stackTarget.pieces.length;
       } else {
         const cellTopLeft = grid.cellToWorld(cell);
         targetSliceX = cellTopLeft.x + (GRID_CELL_SIZE - PIECE_WIDTH) / 2;
@@ -278,10 +283,7 @@ function buildScene(): SakuneScene<Meta> {
       id: pile.id,
       x: pile.x,
       y: pile.y,
-      layout: {
-        type: "pile",
-        offset: { x: -PIECE_STACK_OFFSET_Y, y: PIECE_STACK_OFFSET_Y },
-      },
+      layout: { type: "pile", offset: PIECE_STACK_OFFSET },
       dragMode: "slice-from-item",
       meta: { type: "stack", stackId: pile.id },
       items: pile.pieces.map(pieceStackItem),
@@ -298,8 +300,8 @@ sakune.on("dragStart", (event) => {
   if (event.target.type === "stackSlice") {
     const sourcePile = findPile(event.target.stackId);
     if (!sourcePile) return;
-    const sliceX = sourcePile.x;
-    const sliceY = sourcePile.y + PIECE_STACK_OFFSET_Y * event.target.fromIndex;
+    const sliceX = sourcePile.x + PIECE_STACK_OFFSET.x * event.target.fromIndex;
+    const sliceY = sourcePile.y + PIECE_STACK_OFFSET.y * event.target.fromIndex;
     dragOffset = {
       dx: event.world.x - sliceX,
       dy: event.world.y - sliceY,
