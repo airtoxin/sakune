@@ -123,12 +123,15 @@ export type DragSnapContext<TMeta = unknown> = {
   delta: Point;
   startWorld: Point;
   previousPreviewWorld: Point;
+  anchor: Point;
   modifiers: DragSnapModifiers;
 };
 
+export type DragSnapResult = Point | { anchor: Point } | null | undefined;
+
 export type DragSnapResolver<TMeta = unknown> = (
   context: DragSnapContext<TMeta>,
-) => Point | null | undefined;
+) => DragSnapResult;
 
 export type SakuneSnapOptions<TMeta = unknown> = {
   drag?: DragSnapResolver<TMeta>;
@@ -146,6 +149,8 @@ export type SakuneEvent<TMeta = unknown> =
       screen: Point;
       world: Point;
       previewWorld: Point;
+      anchor: Point;
+      previewAnchor: Point;
       target: HitResult<TMeta>;
     }
   | {
@@ -153,6 +158,8 @@ export type SakuneEvent<TMeta = unknown> =
       screen: Point;
       world: Point;
       previewWorld: Point;
+      anchor: Point;
+      previewAnchor: Point;
       delta: Point;
       target: HitResult<TMeta>;
     }
@@ -161,6 +168,8 @@ export type SakuneEvent<TMeta = unknown> =
       screen: Point;
       world: Point;
       previewWorld: Point;
+      anchor: Point;
+      previewAnchor: Point;
       target: HitResult<TMeta>;
       dropTarget: HitResult<TMeta> | null;
     };
@@ -192,6 +201,7 @@ export type Drawable<TMeta = unknown> = {
   stackIndex?: number;
   stackDragMode?: StackDragMode;
   stackMeta?: TMeta;
+  stackOffset?: Point;
   x: number;
   y: number;
   size: Size;

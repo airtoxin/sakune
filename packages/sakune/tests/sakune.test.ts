@@ -1307,7 +1307,138 @@ test("dragged entity renders at the snapped preview position", () => {
   expect(positions).toEqual([{ x: 40, y: -10 }]);
 });
 
-test("dragEnd dropTarget hit-tests at the snapped preview position", () => {
+test("drag events include the target anchor and its snap-adjusted preview", () => {
+  const { canvas, fire } = createMockCanvas();
+  const sakune = createSakune({
+    canvas,
+    pixelRatio: 1,
+    snap: { drag: () => null },
+  });
+
+  sakune.setScene({
+    items: [
+      {
+        type: "entity",
+        id: "src",
+        x: 40,
+        y: 60,
+        size: { width: 20, height: 20 },
+        visual: { type: "rect" },
+        draggable: true,
+      },
+    ],
+  });
+
+  const seen: { type: string; anchor: Point; previewAnchor: Point }[] = [];
+  sakune.on("dragStart", (e) => {
+    seen.push({ type: "dragStart", anchor: e.anchor, previewAnchor: e.previewAnchor });
+  });
+  sakune.on("dragMove", (e) => {
+    seen.push({ type: "dragMove", anchor: e.anchor, previewAnchor: e.previewAnchor });
+  });
+  sakune.on("dragEnd", (e) => {
+    seen.push({ type: "dragEnd", anchor: e.anchor, previewAnchor: e.previewAnchor });
+  });
+
+  fire("pointerdown", { pointerId: 1, clientX: 50, clientY: 70 });
+  fire("pointermove", { pointerId: 1, clientX: 110, clientY: 130 });
+  fire("pointerup", { pointerId: 1, clientX: 110, clientY: 130 });
+
+  expect(seen).toEqual([
+    { type: "dragStart", anchor: { x: 40, y: 60 }, previewAnchor: { x: 40, y: 60 } },
+    { type: "dragMove", anchor: { x: 40, y: 60 }, previewAnchor: { x: 100, y: 120 } },
+    { type: "dragEnd", anchor: { x: 40, y: 60 }, previewAnchor: { x: 100, y: 120 } },
+  ]);
+});
+
+test("snap.drag returning { anchor } places the target anchor at that point", () => {
+  const { canvas, fire } = createMockCanvas();
+  const sakune = createSakune({
+    canvas,
+    pixelRatio: 1,
+    snap: {
+      drag: () => ({ anchor: { x: 500, y: 400 } }),
+    },
+  });
+  sakune.setScene({
+    items: [
+      {
+        type: "entity",
+        id: "src",
+        x: 100,
+        y: 80,
+        size: { width: 20, height: 20 },
+        visual: { type: "rect" },
+        draggable: true,
+      },
+    ],
+  });
+
+  let captured: { previewWorld: Point; previewAnchor: Point } | null = null;
+  sakune.on("dragMove", (event) => {
+    captured = { previewWorld: event.previewWorld, previewAnchor: event.previewAnchor };
+  });
+
+  fire("pointerdown", { pointerId: 1, clientX: 110, clientY: 90 });
+  fire("pointermove", { pointerId: 1, clientX: 200, clientY: 200 });
+
+  // Cursor offset from anchor was (10, 10). With anchor snapped to (500, 400),
+  // the cursor must be at (510, 410) for the offset to hold.
+  expect(captured).toEqual({
+    previewWorld: { x: 510, y: 410 },
+    previewAnchor: { x: 500, y: 400 },
+  });
+});
+
+test("dragging a stackSlice over another stack snaps to that stack's top by default", () => {
+  const { canvas, fire } = createMockCanvas();
+  const sakune = createSakune({ canvas, pixelRatio: 1 });
+
+  // Two piles using explicit offsets so the math is exact.
+  // Pile "src" provides the slice being dragged; pile "dst" is the drop target.
+  sakune.setScene({
+    items: [
+      {
+        type: "stack",
+        id: "src",
+        x: 0,
+        y: 300,
+        dragMode: "slice-from-item",
+        layout: { type: "pile", offset: { x: 0, y: -10 } },
+        items: [
+          { id: "s0", size: { width: 20, height: 20 }, visual: { type: "rect" } },
+          { id: "s1", size: { width: 20, height: 20 }, visual: { type: "rect" } },
+        ],
+      },
+      {
+        type: "stack",
+        id: "dst",
+        x: 200,
+        y: 300,
+        dragMode: "slice-from-item",
+        layout: { type: "pile", offset: { x: 0, y: -10 } },
+        items: [
+          { id: "d0", size: { width: 20, height: 20 }, visual: { type: "rect" } },
+          { id: "d1", size: { width: 20, height: 20 }, visual: { type: "rect" } },
+          { id: "d2", size: { width: 20, height: 20 }, visual: { type: "rect" } },
+        ],
+      },
+    ],
+  });
+
+  let lastPreviewAnchor: Point | null = null;
+  sakune.on("dragMove", (event) => {
+    lastPreviewAnchor = event.previewAnchor;
+  });
+
+  // Press on s0 (the bottom of src) and drag over d2 (the top of dst).
+  fire("pointerdown", { pointerId: 1, clientX: 10, clientY: 310 });
+  fire("pointermove", { pointerId: 1, clientX: 210, clientY: 285 });
+
+  // d2 sits at (200, 280); next slot above it is (200, 270). The slice anchor
+  // (s0) should snap there.
+  expect(lastPreviewAnchor).toEqual({ x: 200, y: 270 });
+});
   const { canvas, fire } = createMockCanvas();
   const sakune = createSakune({
     canvas,
