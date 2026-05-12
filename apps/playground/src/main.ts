@@ -1,12 +1,12 @@
 import "./style.css";
 import {
-  createSakune,
+  createRenderer,
   type HitResult,
-  type Sakune,
-  type SakuneScene,
+  type Renderer,
+  type Scene,
   type SceneItem,
-} from "sakune";
-import { squareGrid } from "sakune/boards";
+} from "@tideform/render";
+import { squareGrid } from "@tideform/render/boards";
 
 type Meta =
   | { type: "card"; cardId: string }
@@ -139,9 +139,9 @@ function pileOnCell(cell: { row: number; col: number }): Pile | null {
 }
 
 // Forward-declare so the snap.drag closure can call back into the instance —
-// the resolver only runs after createSakune has returned and assigned this.
-let sakune: Sakune<Meta>;
-sakune = createSakune<Meta>({
+// the resolver only runs after createRenderer has returned and assigned this.
+let renderer: Renderer<Meta>;
+renderer = createRenderer<Meta>({
   canvas,
   snap: {
     drag: ({ target, world, anchor }) => {
@@ -154,7 +154,7 @@ sakune = createSakune<Meta>({
         return { anchor };
       }
       if (pile) {
-        const next = sakune.stackNextAnchor(pile.id);
+        const next = renderer.stackNextAnchor(pile.id);
         if (next) return { anchor: next };
       }
       const cellTopLeft = grid.cellToWorld(cell);
@@ -167,7 +167,7 @@ sakune = createSakune<Meta>({
     },
   },
 });
-sakune.resize(800, 480);
+renderer.resize(800, 480);
 
 function pieceStrokes(color: string): { stroke: string; capStroke: string } {
   return {
@@ -201,7 +201,7 @@ function pieceStackItem(piece: StackPiece): {
   };
 }
 
-function buildScene(): SakuneScene<Meta> {
+function buildScene(): Scene<Meta> {
   const gridItems: SceneItem<Meta>[] = grid.cells().map((cell) => {
     const pos = grid.cellToWorld(cell);
     return {
@@ -268,11 +268,11 @@ function buildScene(): SakuneScene<Meta> {
   return { items };
 }
 
-sakune.on("dragStart", (event) => {
+renderer.on("dragStart", (event) => {
   log.textContent = `dragStart  ${describeTarget(event.target)}`;
 });
 
-sakune.on("dragEnd", (event) => {
+renderer.on("dragEnd", (event) => {
   log.textContent = `dragEnd    ${describeTarget(event.target)} → ${describeTarget(event.dropTarget)}`;
 
   if (event.target.type === "stackSlice") {
@@ -299,7 +299,7 @@ sakune.on("dragEnd", (event) => {
     }
 
     removeEmptyPiles();
-    sakune.setScene(buildScene());
+    renderer.setScene(buildScene());
     return;
   }
 
@@ -313,11 +313,11 @@ sakune.on("dragEnd", (event) => {
     moveCardToTop(event.target.id);
   }
 
-  sakune.setScene(buildScene());
+  renderer.setScene(buildScene());
 });
 
-sakune.on("click", (event) => {
+renderer.on("click", (event) => {
   log.textContent = `click      ${describeTarget(event.target)}`;
 });
 
-sakune.setScene(buildScene());
+renderer.setScene(buildScene());

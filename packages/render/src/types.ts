@@ -75,7 +75,7 @@ export type RenderStack<TMeta = unknown> = {
 
 export type SceneItem<TMeta = unknown> = RenderEntity<TMeta> | RenderStack<TMeta>;
 
-export type SakuneScene<TMeta = unknown> = {
+export type Scene<TMeta = unknown> = {
   items: SceneItem<TMeta>[];
 };
 
@@ -131,11 +131,11 @@ export type DragSnapResult = Point | { anchor: Point } | null | undefined;
 
 export type DragSnapResolver<TMeta = unknown> = (context: DragSnapContext<TMeta>) => DragSnapResult;
 
-export type SakuneSnapOptions<TMeta = unknown> = {
+export type SnapOptions<TMeta = unknown> = {
   drag?: DragSnapResolver<TMeta>;
 };
 
-export type SakuneEvent<TMeta = unknown> =
+export type RendererEvent<TMeta = unknown> =
   | {
       type: "click";
       screen: Point;
@@ -172,23 +172,23 @@ export type SakuneEvent<TMeta = unknown> =
       dropTarget: HitResult<TMeta> | null;
     };
 
-export type SakuneOptions<TMeta = unknown> = {
+export type RendererOptions<TMeta = unknown> = {
   canvas: HTMLCanvasElement;
   pixelRatio?: number;
-  snap?: SakuneSnapOptions<TMeta>;
+  snap?: SnapOptions<TMeta>;
 };
 
 export type HitTestOptions = {
   excludeId?: string;
 };
 
-export type Sakune<TMeta = unknown> = {
-  setScene(scene: SakuneScene<TMeta>): void;
+export type Renderer<TMeta = unknown> = {
+  setScene(scene: Scene<TMeta>): void;
   resize(width: number, height: number): void;
   destroy(): void;
-  on<TType extends SakuneEvent<TMeta>["type"]>(
+  on<TType extends RendererEvent<TMeta>["type"]>(
     type: TType,
-    handler: (event: Extract<SakuneEvent<TMeta>, { type: TType }>) => void,
+    handler: (event: Extract<RendererEvent<TMeta>, { type: TType }>) => void,
   ): () => void;
   hitTest(point: Point, options?: HitTestOptions): HitResult<TMeta> | null;
   // World position where a new piece appended to this stack would land. Apps

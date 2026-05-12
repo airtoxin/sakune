@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test } from "vite-plus/test";
-import { createSakune } from "../src/sakune.ts";
+import { createRenderer } from "../src/render.ts";
 import type { DragSnapContext, HitResult, Point } from "../src/types.ts";
 
 type MockCtxCall = { method: string; args: unknown[] };
@@ -148,9 +148,9 @@ function flushRaf(): void {
 
 test("setScene defers rendering until next animation frame", () => {
   const { canvas, ctx } = createMockCanvas();
-  const sakune = createSakune({ canvas, pixelRatio: 1 });
+  const renderer = createRenderer({ canvas, pixelRatio: 1 });
 
-  sakune.setScene({
+  renderer.setScene({
     items: [
       {
         type: "entity",
@@ -170,23 +170,23 @@ test("setScene defers rendering until next animation frame", () => {
 
 test("multiple setScene calls coalesce into a single rAF", () => {
   const { canvas } = createMockCanvas();
-  const sakune = createSakune({ canvas, pixelRatio: 1 });
+  const renderer = createRenderer({ canvas, pixelRatio: 1 });
 
-  sakune.setScene({ items: [] });
-  sakune.setScene({ items: [] });
-  sakune.setScene({ items: [] });
+  renderer.setScene({ items: [] });
+  renderer.setScene({ items: [] });
+  renderer.setScene({ items: [] });
   expect(rafQueue).toHaveLength(1);
   flushRaf();
 
-  sakune.setScene({ items: [] });
+  renderer.setScene({ items: [] });
   expect(rafQueue).toHaveLength(1);
 });
 
 test("render scales context by pixelRatio", () => {
   const { canvas, ctx } = createMockCanvas();
-  const sakune = createSakune({ canvas, pixelRatio: 2 });
+  const renderer = createRenderer({ canvas, pixelRatio: 2 });
 
-  sakune.setScene({ items: [] });
+  renderer.setScene({ items: [] });
   flushRaf();
 
   const scaleCall = ctx.calls.find((c) => c.method === "scale");
@@ -195,9 +195,9 @@ test("render scales context by pixelRatio", () => {
 
 test("resize updates buffer size, CSS size, and triggers redraw", () => {
   const { canvas } = createMockCanvas();
-  const sakune = createSakune({ canvas, pixelRatio: 2 });
+  const renderer = createRenderer({ canvas, pixelRatio: 2 });
 
-  sakune.resize(400, 300);
+  renderer.resize(400, 300);
   expect(canvas.width).toBe(800);
   expect(canvas.height).toBe(600);
   expect(canvas.style.width).toBe("400px");
@@ -207,9 +207,9 @@ test("resize updates buffer size, CSS size, and triggers redraw", () => {
 
 test("hitTest returns the topmost drawable as an entity result", () => {
   const { canvas } = createMockCanvas();
-  const sakune = createSakune({ canvas, pixelRatio: 1 });
+  const renderer = createRenderer({ canvas, pixelRatio: 1 });
 
-  sakune.setScene({
+  renderer.setScene({
     items: [
       {
         type: "entity",
@@ -230,25 +230,25 @@ test("hitTest returns the topmost drawable as an entity result", () => {
     ],
   });
 
-  expect(sakune.hitTest({ x: 25, y: 25 })).toEqual({
+  expect(renderer.hitTest({ x: 25, y: 25 })).toEqual({
     type: "entity",
     id: "front",
     meta: undefined,
   });
-  expect(sakune.hitTest({ x: 5, y: 5 })).toEqual({
+  expect(renderer.hitTest({ x: 5, y: 5 })).toEqual({
     type: "entity",
     id: "back",
     meta: undefined,
   });
-  expect(sakune.hitTest({ x: 200, y: 200 })).toBeNull();
+  expect(renderer.hitTest({ x: 200, y: 200 })).toBeNull();
 });
 
 test("on returns a cleanup that detaches the handler", () => {
   const { canvas, fire } = createMockCanvas();
-  const sakune = createSakune({ canvas, pixelRatio: 1 });
+  const renderer = createRenderer({ canvas, pixelRatio: 1 });
 
   let calls = 0;
-  const off = sakune.on("click", () => {
+  const off = renderer.on("click", () => {
     calls++;
   });
 
@@ -265,9 +265,9 @@ test("on returns a cleanup that detaches the handler", () => {
 test("click event reports the entity hit at pointerup", () => {
   type Meta = { kind: "card"; id: string };
   const { canvas, fire } = createMockCanvas();
-  const sakune = createSakune<Meta>({ canvas, pixelRatio: 1 });
+  const renderer = createRenderer<Meta>({ canvas, pixelRatio: 1 });
 
-  sakune.setScene({
+  renderer.setScene({
     items: [
       {
         type: "entity",
@@ -282,7 +282,7 @@ test("click event reports the entity hit at pointerup", () => {
   });
 
   const received: (HitResult<Meta> | null)[] = [];
-  sakune.on("click", (event) => {
+  renderer.on("click", (event) => {
     received.push(event.target);
   });
 
@@ -300,10 +300,10 @@ test("click event reports the entity hit at pointerup", () => {
 
 test("click event reports null target when pressed in empty space", () => {
   const { canvas, fire } = createMockCanvas();
-  const sakune = createSakune({ canvas, pixelRatio: 1 });
+  const renderer = createRenderer({ canvas, pixelRatio: 1 });
 
   const received: (HitResult | null)[] = [];
-  sakune.on("click", (event) => {
+  renderer.on("click", (event) => {
     received.push(event.target);
   });
 
@@ -315,9 +315,9 @@ test("click event reports null target when pressed in empty space", () => {
 
 test("draggable item: dragStart fires once, then dragMove per move, then dragEnd", () => {
   const { canvas, fire } = createMockCanvas();
-  const sakune = createSakune({ canvas, pixelRatio: 1 });
+  const renderer = createRenderer({ canvas, pixelRatio: 1 });
 
-  sakune.setScene({
+  renderer.setScene({
     items: [
       {
         type: "entity",
@@ -332,10 +332,10 @@ test("draggable item: dragStart fires once, then dragMove per move, then dragEnd
   });
 
   const events: string[] = [];
-  sakune.on("dragStart", () => events.push("dragStart"));
-  sakune.on("dragMove", () => events.push("dragMove"));
-  sakune.on("dragEnd", () => events.push("dragEnd"));
-  sakune.on("click", () => events.push("click"));
+  renderer.on("dragStart", () => events.push("dragStart"));
+  renderer.on("dragMove", () => events.push("dragMove"));
+  renderer.on("dragEnd", () => events.push("dragEnd"));
+  renderer.on("click", () => events.push("click"));
 
   fire("pointerdown", { pointerId: 1, clientX: 10, clientY: 10 });
   fire("pointermove", { pointerId: 1, clientX: 20, clientY: 15 });
@@ -348,9 +348,9 @@ test("draggable item: dragStart fires once, then dragMove per move, then dragEnd
 test("dragStart / dragMove / dragEnd report the dragged entity as target", () => {
   type Meta = { kind: "card"; id: string };
   const { canvas, fire } = createMockCanvas();
-  const sakune = createSakune<Meta>({ canvas, pixelRatio: 1 });
+  const renderer = createRenderer<Meta>({ canvas, pixelRatio: 1 });
 
-  sakune.setScene({
+  renderer.setScene({
     items: [
       {
         type: "entity",
@@ -366,9 +366,9 @@ test("dragStart / dragMove / dragEnd report the dragged entity as target", () =>
   });
 
   const targets: HitResult<Meta>[] = [];
-  sakune.on("dragStart", (event) => targets.push(event.target));
-  sakune.on("dragMove", (event) => targets.push(event.target));
-  sakune.on("dragEnd", (event) => targets.push(event.target));
+  renderer.on("dragStart", (event) => targets.push(event.target));
+  renderer.on("dragMove", (event) => targets.push(event.target));
+  renderer.on("dragEnd", (event) => targets.push(event.target));
 
   fire("pointerdown", { pointerId: 1, clientX: 10, clientY: 10 });
   fire("pointermove", { pointerId: 1, clientX: 20, clientY: 20 });
@@ -386,9 +386,9 @@ test("dragStart / dragMove / dragEnd report the dragged entity as target", () =>
 
 test("dragMove delta is per-step difference from previous world position", () => {
   const { canvas, fire } = createMockCanvas();
-  const sakune = createSakune({ canvas, pixelRatio: 1 });
+  const renderer = createRenderer({ canvas, pixelRatio: 1 });
 
-  sakune.setScene({
+  renderer.setScene({
     items: [
       {
         type: "entity",
@@ -403,7 +403,7 @@ test("dragMove delta is per-step difference from previous world position", () =>
   });
 
   const deltas: { x: number; y: number }[] = [];
-  sakune.on("dragMove", (event) => {
+  renderer.on("dragMove", (event) => {
     deltas.push(event.delta);
   });
 
@@ -420,9 +420,9 @@ test("dragMove delta is per-step difference from previous world position", () =>
 
 test("dragEnd dropTarget reflects the drawable hit at pointerup", () => {
   const { canvas, fire } = createMockCanvas();
-  const sakune = createSakune({ canvas, pixelRatio: 1 });
+  const renderer = createRenderer({ canvas, pixelRatio: 1 });
 
-  sakune.setScene({
+  renderer.setScene({
     items: [
       {
         type: "entity",
@@ -445,7 +445,7 @@ test("dragEnd dropTarget reflects the drawable hit at pointerup", () => {
   });
 
   const dropTargets: (HitResult | null)[] = [];
-  sakune.on("dragEnd", (event) => {
+  renderer.on("dragEnd", (event) => {
     dropTargets.push(event.dropTarget);
   });
 
@@ -458,9 +458,9 @@ test("dragEnd dropTarget reflects the drawable hit at pointerup", () => {
 
 test("non-draggable hit emits click only, never drag events", () => {
   const { canvas, fire } = createMockCanvas();
-  const sakune = createSakune({ canvas, pixelRatio: 1 });
+  const renderer = createRenderer({ canvas, pixelRatio: 1 });
 
-  sakune.setScene({
+  renderer.setScene({
     items: [
       {
         type: "entity",
@@ -474,10 +474,10 @@ test("non-draggable hit emits click only, never drag events", () => {
   });
 
   const events: string[] = [];
-  sakune.on("dragStart", () => events.push("dragStart"));
-  sakune.on("dragMove", () => events.push("dragMove"));
-  sakune.on("dragEnd", () => events.push("dragEnd"));
-  sakune.on("click", () => events.push("click"));
+  renderer.on("dragStart", () => events.push("dragStart"));
+  renderer.on("dragMove", () => events.push("dragMove"));
+  renderer.on("dragEnd", () => events.push("dragEnd"));
+  renderer.on("click", () => events.push("click"));
 
   fire("pointerdown", { pointerId: 1, clientX: 10, clientY: 10 });
   fire("pointermove", { pointerId: 1, clientX: 20, clientY: 20 });
@@ -488,9 +488,9 @@ test("non-draggable hit emits click only, never drag events", () => {
 
 test("pointer capture is requested on pointerdown and released on pointerup", () => {
   const { canvas, fire, pointerCaptured, pointerReleased } = createMockCanvas();
-  const sakune = createSakune({ canvas, pixelRatio: 1 });
+  const renderer = createRenderer({ canvas, pixelRatio: 1 });
 
-  sakune.setScene({ items: [] });
+  renderer.setScene({ items: [] });
   fire("pointerdown", { pointerId: 7, clientX: 0, clientY: 0 });
   fire("pointerup", { pointerId: 7, clientX: 0, clientY: 0 });
 
@@ -500,15 +500,15 @@ test("pointer capture is requested on pointerdown and released on pointerup", ()
 
 test("destroy detaches listeners and cancels future renders", () => {
   const { canvas, ctx, fire } = createMockCanvas();
-  const sakune = createSakune({ canvas, pixelRatio: 1 });
+  const renderer = createRenderer({ canvas, pixelRatio: 1 });
 
   let clicks = 0;
-  sakune.on("click", () => {
+  renderer.on("click", () => {
     clicks++;
   });
 
-  sakune.setScene({ items: [] });
-  sakune.destroy();
+  renderer.setScene({ items: [] });
+  renderer.destroy();
 
   flushRaf();
   expect(ctx.calls.find((c) => c.method === "scale")).toBeUndefined();
@@ -542,9 +542,9 @@ const hoistScene = {
 
 test("dragging item is rendered last (on top) during drag", () => {
   const { canvas, ctx, fire } = createMockCanvas();
-  const sakune = createSakune({ canvas, pixelRatio: 1 });
+  const renderer = createRenderer({ canvas, pixelRatio: 1 });
 
-  sakune.setScene(hoistScene);
+  renderer.setScene(hoistScene);
   flushRaf();
   expect(ctx.calls.filter((c) => c.method === "rect").map((c) => c.args[0])).toEqual([10, 200]);
 
@@ -558,9 +558,9 @@ test("dragging item is rendered last (on top) during drag", () => {
 
 test("dragEnd restores normal render order", () => {
   const { canvas, ctx, fire } = createMockCanvas();
-  const sakune = createSakune({ canvas, pixelRatio: 1 });
+  const renderer = createRenderer({ canvas, pixelRatio: 1 });
 
-  sakune.setScene(hoistScene);
+  renderer.setScene(hoistScene);
   flushRaf();
 
   fire("pointerdown", { pointerId: 1, clientX: 25, clientY: 25 });
@@ -576,9 +576,9 @@ test("dragEnd restores normal render order", () => {
 
 test("pointercancel restores normal render order", () => {
   const { canvas, ctx, fire } = createMockCanvas();
-  const sakune = createSakune({ canvas, pixelRatio: 1 });
+  const renderer = createRenderer({ canvas, pixelRatio: 1 });
 
-  sakune.setScene(hoistScene);
+  renderer.setScene(hoistScene);
   flushRaf();
 
   fire("pointerdown", { pointerId: 1, clientX: 25, clientY: 25 });
@@ -594,9 +594,9 @@ test("pointercancel restores normal render order", () => {
 
 test("dragStart reports the pointerdown position as world", () => {
   const { canvas, fire } = createMockCanvas();
-  const sakune = createSakune({ canvas, pixelRatio: 1 });
+  const renderer = createRenderer({ canvas, pixelRatio: 1 });
 
-  sakune.setScene({
+  renderer.setScene({
     items: [
       {
         type: "entity",
@@ -611,7 +611,7 @@ test("dragStart reports the pointerdown position as world", () => {
   });
 
   const starts: { world: { x: number; y: number }; screen: { x: number; y: number } }[] = [];
-  sakune.on("dragStart", (event) => {
+  renderer.on("dragStart", (event) => {
     starts.push({ world: event.world, screen: event.screen });
   });
 
@@ -624,9 +624,9 @@ test("dragStart reports the pointerdown position as world", () => {
 
 test("dragging item follows the pointer without setScene calls", () => {
   const { canvas, ctx, fire } = createMockCanvas();
-  const sakune = createSakune({ canvas, pixelRatio: 1 });
+  const renderer = createRenderer({ canvas, pixelRatio: 1 });
 
-  sakune.setScene(hoistScene);
+  renderer.setScene(hoistScene);
   flushRaf();
 
   fire("pointerdown", { pointerId: 1, clientX: 25, clientY: 25 });
@@ -657,9 +657,9 @@ test("dragging item follows the pointer without setScene calls", () => {
 
 test("dragMode 'slice-from-item' hides the original slice while dragging", () => {
   const { canvas, ctx, fire } = createMockCanvas();
-  const sakune = createSakune({ canvas, pixelRatio: 1 });
+  const renderer = createRenderer({ canvas, pixelRatio: 1 });
 
-  sakune.setScene({
+  renderer.setScene({
     items: [
       {
         type: "stack",
@@ -695,9 +695,9 @@ test("dragMode 'slice-from-item' hides the original slice while dragging", () =>
 
 test("click without drag does not change render order", () => {
   const { canvas, ctx, fire } = createMockCanvas();
-  const sakune = createSakune({ canvas, pixelRatio: 1 });
+  const renderer = createRenderer({ canvas, pixelRatio: 1 });
 
-  sakune.setScene(hoistScene);
+  renderer.setScene(hoistScene);
   flushRaf();
 
   ctx.calls.length = 0;
@@ -710,9 +710,9 @@ test("click without drag does not change render order", () => {
 
 test("hitTest accepts an excludeId option", () => {
   const { canvas } = createMockCanvas();
-  const sakune = createSakune({ canvas, pixelRatio: 1 });
+  const renderer = createRenderer({ canvas, pixelRatio: 1 });
 
-  sakune.setScene({
+  renderer.setScene({
     items: [
       {
         type: "entity",
@@ -733,12 +733,12 @@ test("hitTest accepts an excludeId option", () => {
     ],
   });
 
-  expect(sakune.hitTest({ x: 50, y: 50 })).toEqual({
+  expect(renderer.hitTest({ x: 50, y: 50 })).toEqual({
     type: "entity",
     id: "front",
     meta: undefined,
   });
-  expect(sakune.hitTest({ x: 50, y: 50 }, { excludeId: "front" })).toEqual({
+  expect(renderer.hitTest({ x: 50, y: 50 }, { excludeId: "front" })).toEqual({
     type: "entity",
     id: "back",
     meta: undefined,
@@ -748,9 +748,9 @@ test("hitTest accepts an excludeId option", () => {
 test("dragMode 'stack': events report the stack as target", () => {
   type Meta = { kind: "card"; cardId: string } | { kind: "deck"; deckId: string };
   const { canvas, fire } = createMockCanvas();
-  const sakune = createSakune<Meta>({ canvas, pixelRatio: 1 });
+  const renderer = createRenderer<Meta>({ canvas, pixelRatio: 1 });
 
-  sakune.setScene({
+  renderer.setScene({
     items: [
       {
         type: "stack",
@@ -778,8 +778,8 @@ test("dragMode 'stack': events report the stack as target", () => {
   });
 
   const targets: HitResult<Meta>[] = [];
-  sakune.on("dragStart", (event) => targets.push(event.target));
-  sakune.on("dragEnd", (event) => targets.push(event.target));
+  renderer.on("dragStart", (event) => targets.push(event.target));
+  renderer.on("dragEnd", (event) => targets.push(event.target));
 
   fire("pointerdown", { pointerId: 1, clientX: 10, clientY: 10 });
   fire("pointermove", { pointerId: 1, clientX: 20, clientY: 20 });
@@ -793,9 +793,9 @@ test("dragMode 'stack': events report the stack as target", () => {
 
 test("dragMode 'stack': hoists every drawable in the dragged stack", () => {
   const { canvas, ctx, fire } = createMockCanvas();
-  const sakune = createSakune({ canvas, pixelRatio: 1 });
+  const renderer = createRenderer({ canvas, pixelRatio: 1 });
 
-  sakune.setScene({
+  renderer.setScene({
     items: [
       {
         type: "stack",
@@ -840,9 +840,9 @@ test("dragMode 'stack': hoists every drawable in the dragged stack", () => {
 
 test("dragMode 'stack': dropTarget excludes every member of the dragged stack", () => {
   const { canvas, fire } = createMockCanvas();
-  const sakune = createSakune({ canvas, pixelRatio: 1 });
+  const renderer = createRenderer({ canvas, pixelRatio: 1 });
 
-  sakune.setScene({
+  renderer.setScene({
     items: [
       {
         type: "entity",
@@ -875,7 +875,7 @@ test("dragMode 'stack': dropTarget excludes every member of the dragged stack", 
   });
 
   const dropTargets: (HitResult | null)[] = [];
-  sakune.on("dragEnd", (event) => {
+  renderer.on("dragEnd", (event) => {
     dropTargets.push(event.dropTarget);
   });
 
@@ -893,9 +893,9 @@ test("dragMode 'stack': dropTarget excludes every member of the dragged stack", 
 test("dragMode 'item': events report a single stackItem target", () => {
   type Meta = { kind: "card"; cardId: string };
   const { canvas, fire } = createMockCanvas();
-  const sakune = createSakune<Meta>({ canvas, pixelRatio: 1 });
+  const renderer = createRenderer<Meta>({ canvas, pixelRatio: 1 });
 
-  sakune.setScene({
+  renderer.setScene({
     items: [
       {
         type: "stack",
@@ -929,7 +929,7 @@ test("dragMode 'item': events report a single stackItem target", () => {
   });
 
   const targets: HitResult<Meta>[] = [];
-  sakune.on("dragStart", (event) => targets.push(event.target));
+  renderer.on("dragStart", (event) => targets.push(event.target));
 
   fire("pointerdown", { pointerId: 1, clientX: 40, clientY: -60 });
   fire("pointermove", { pointerId: 1, clientX: 50, clientY: -60 });
@@ -948,9 +948,9 @@ test("dragMode 'item': events report a single stackItem target", () => {
 
 test("dragMode 'item': hoists only the hit item", () => {
   const { canvas, ctx, fire } = createMockCanvas();
-  const sakune = createSakune({ canvas, pixelRatio: 1 });
+  const renderer = createRenderer({ canvas, pixelRatio: 1 });
 
-  sakune.setScene({
+  renderer.setScene({
     items: [
       {
         type: "stack",
@@ -993,9 +993,9 @@ test("dragMode 'item': hoists only the hit item", () => {
 test("dragMode 'slice-from-item': target is a stackSlice from the hit index", () => {
   type Meta = { kind: "card"; cardId: string };
   const { canvas, fire } = createMockCanvas();
-  const sakune = createSakune<Meta>({ canvas, pixelRatio: 1 });
+  const renderer = createRenderer<Meta>({ canvas, pixelRatio: 1 });
 
-  sakune.setScene({
+  renderer.setScene({
     items: [
       {
         type: "stack",
@@ -1029,7 +1029,7 @@ test("dragMode 'slice-from-item': target is a stackSlice from the hit index", ()
   });
 
   const targets: HitResult<Meta>[] = [];
-  sakune.on("dragStart", (event) => targets.push(event.target));
+  renderer.on("dragStart", (event) => targets.push(event.target));
 
   fire("pointerdown", { pointerId: 1, clientX: 40, clientY: -60 });
   fire("pointermove", { pointerId: 1, clientX: 50, clientY: -60 });
@@ -1050,9 +1050,9 @@ test("dragMode 'slice-from-item': target is a stackSlice from the hit index", ()
 
 test("dragMode 'slice-from-item': hoists hit item and items above to the top", () => {
   const { canvas, ctx, fire } = createMockCanvas();
-  const sakune = createSakune({ canvas, pixelRatio: 1 });
+  const renderer = createRenderer({ canvas, pixelRatio: 1 });
 
-  sakune.setScene({
+  renderer.setScene({
     items: [
       {
         type: "stack",
@@ -1117,7 +1117,7 @@ const draggableScene = {
 test("snap.drag receives context with target, world, delta, startWorld and previousPreviewWorld", () => {
   const { canvas, fire } = createMockCanvas();
   const contexts: DragSnapContext[] = [];
-  const sakune = createSakune({
+  const renderer = createRenderer({
     canvas,
     pixelRatio: 1,
     snap: {
@@ -1128,7 +1128,7 @@ test("snap.drag receives context with target, world, delta, startWorld and previ
     },
   });
 
-  sakune.setScene(draggableScene);
+  renderer.setScene(draggableScene);
 
   fire("pointerdown", { pointerId: 1, clientX: 10, clientY: 10 });
   fire("pointermove", { pointerId: 1, clientX: 25, clientY: 18 });
@@ -1159,7 +1159,7 @@ test("snap.drag receives context with target, world, delta, startWorld and previ
 
 test("snap.drag returning a Point sets previewWorld on dragMove and dragEnd", () => {
   const { canvas, fire } = createMockCanvas();
-  const sakune = createSakune({
+  const renderer = createRenderer({
     canvas,
     pixelRatio: 1,
     snap: {
@@ -1169,14 +1169,14 @@ test("snap.drag returning a Point sets previewWorld on dragMove and dragEnd", ()
       }),
     },
   });
-  sakune.setScene(draggableScene);
+  renderer.setScene(draggableScene);
 
   const moves: { world: Point; preview: Point }[] = [];
   const ends: { world: Point; preview: Point }[] = [];
-  sakune.on("dragMove", (event) => {
+  renderer.on("dragMove", (event) => {
     moves.push({ world: event.world, preview: event.previewWorld });
   });
-  sakune.on("dragEnd", (event) => {
+  renderer.on("dragEnd", (event) => {
     ends.push({ world: event.world, preview: event.previewWorld });
   });
 
@@ -1194,15 +1194,15 @@ test("snap.drag returning a Point sets previewWorld on dragMove and dragEnd", ()
 
 test("snap.drag returning null leaves previewWorld equal to world", () => {
   const { canvas, fire } = createMockCanvas();
-  const sakune = createSakune({
+  const renderer = createRenderer({
     canvas,
     pixelRatio: 1,
     snap: { drag: () => null },
   });
-  sakune.setScene(draggableScene);
+  renderer.setScene(draggableScene);
 
   const previews: Point[] = [];
-  sakune.on("dragMove", (event) => {
+  renderer.on("dragMove", (event) => {
     previews.push(event.previewWorld);
   });
 
@@ -1215,15 +1215,15 @@ test("snap.drag returning null leaves previewWorld equal to world", () => {
 
 test("dragStart previewWorld matches startWorld", () => {
   const { canvas, fire } = createMockCanvas();
-  const sakune = createSakune({
+  const renderer = createRenderer({
     canvas,
     pixelRatio: 1,
     snap: { drag: () => ({ x: 999, y: 999 }) },
   });
-  sakune.setScene(draggableScene);
+  renderer.setScene(draggableScene);
 
   const starts: { world: Point; preview: Point }[] = [];
-  sakune.on("dragStart", (event) => {
+  renderer.on("dragStart", (event) => {
     starts.push({ world: event.world, preview: event.previewWorld });
   });
 
@@ -1237,7 +1237,7 @@ test("dragStart previewWorld matches startWorld", () => {
 test("snap.drag receives modifier keys from PointerEvent", () => {
   const { canvas, fire } = createMockCanvas();
   const contexts: DragSnapContext[] = [];
-  const sakune = createSakune({
+  const renderer = createRenderer({
     canvas,
     pixelRatio: 1,
     snap: {
@@ -1247,7 +1247,7 @@ test("snap.drag receives modifier keys from PointerEvent", () => {
       },
     },
   });
-  sakune.setScene(draggableScene);
+  renderer.setScene(draggableScene);
 
   fire("pointerdown", { pointerId: 1, clientX: 10, clientY: 10 });
   fire("pointermove", {
@@ -1282,7 +1282,7 @@ test("snap.drag receives modifier keys from PointerEvent", () => {
 
 test("dragged entity renders at the snapped preview position", () => {
   const { canvas, ctx, fire } = createMockCanvas();
-  const sakune = createSakune({
+  const renderer = createRenderer({
     canvas,
     pixelRatio: 1,
     snap: {
@@ -1292,7 +1292,7 @@ test("dragged entity renders at the snapped preview position", () => {
       }),
     },
   });
-  sakune.setScene(draggableScene);
+  renderer.setScene(draggableScene);
   flushRaf();
 
   ctx.calls.length = 0;
@@ -1309,13 +1309,13 @@ test("dragged entity renders at the snapped preview position", () => {
 
 test("drag events include the target anchor and its snap-adjusted preview", () => {
   const { canvas, fire } = createMockCanvas();
-  const sakune = createSakune({
+  const renderer = createRenderer({
     canvas,
     pixelRatio: 1,
     snap: { drag: () => null },
   });
 
-  sakune.setScene({
+  renderer.setScene({
     items: [
       {
         type: "entity",
@@ -1330,13 +1330,13 @@ test("drag events include the target anchor and its snap-adjusted preview", () =
   });
 
   const seen: { type: string; anchor: Point; previewAnchor: Point }[] = [];
-  sakune.on("dragStart", (e) => {
+  renderer.on("dragStart", (e) => {
     seen.push({ type: "dragStart", anchor: e.anchor, previewAnchor: e.previewAnchor });
   });
-  sakune.on("dragMove", (e) => {
+  renderer.on("dragMove", (e) => {
     seen.push({ type: "dragMove", anchor: e.anchor, previewAnchor: e.previewAnchor });
   });
-  sakune.on("dragEnd", (e) => {
+  renderer.on("dragEnd", (e) => {
     seen.push({ type: "dragEnd", anchor: e.anchor, previewAnchor: e.previewAnchor });
   });
 
@@ -1353,14 +1353,14 @@ test("drag events include the target anchor and its snap-adjusted preview", () =
 
 test("snap.drag returning { anchor } places the target anchor at that point", () => {
   const { canvas, fire } = createMockCanvas();
-  const sakune = createSakune({
+  const renderer = createRenderer({
     canvas,
     pixelRatio: 1,
     snap: {
       drag: () => ({ anchor: { x: 500, y: 400 } }),
     },
   });
-  sakune.setScene({
+  renderer.setScene({
     items: [
       {
         type: "entity",
@@ -1375,7 +1375,7 @@ test("snap.drag returning { anchor } places the target anchor at that point", ()
   });
 
   let captured: { previewWorld: Point; previewAnchor: Point } | null = null;
-  sakune.on("dragMove", (event) => {
+  renderer.on("dragMove", (event) => {
     captured = { previewWorld: event.previewWorld, previewAnchor: event.previewAnchor };
   });
 
@@ -1392,9 +1392,9 @@ test("snap.drag returning { anchor } places the target anchor at that point", ()
 
 test("stackNextAnchor returns the world point where the next piece would land", () => {
   const { canvas } = createMockCanvas();
-  const sakune = createSakune({ canvas, pixelRatio: 1 });
+  const renderer = createRenderer({ canvas, pixelRatio: 1 });
 
-  sakune.setScene({
+  renderer.setScene({
     items: [
       {
         type: "stack",
@@ -1412,13 +1412,13 @@ test("stackNextAnchor returns the world point where the next piece would land", 
   });
 
   // p2 sits at (108, 280); the next slot is one offset above.
-  expect(sakune.stackNextAnchor("pile")).toEqual({ x: 112, y: 270 });
-  expect(sakune.stackNextAnchor("missing")).toBeNull();
+  expect(renderer.stackNextAnchor("pile")).toEqual({ x: 112, y: 270 });
+  expect(renderer.stackNextAnchor("missing")).toBeNull();
 });
 
 test("dragEnd dropTarget hit-tests at the snapped preview position", () => {
   const { canvas, fire } = createMockCanvas();
-  const sakune = createSakune({
+  const renderer = createRenderer({
     canvas,
     pixelRatio: 1,
     snap: {
@@ -1427,7 +1427,7 @@ test("dragEnd dropTarget hit-tests at the snapped preview position", () => {
     },
   });
 
-  sakune.setScene({
+  renderer.setScene({
     items: [
       {
         type: "entity",
@@ -1450,7 +1450,7 @@ test("dragEnd dropTarget hit-tests at the snapped preview position", () => {
   });
 
   const drops: (HitResult | null)[] = [];
-  sakune.on("dragEnd", (event) => {
+  renderer.on("dragEnd", (event) => {
     drops.push(event.dropTarget);
   });
 

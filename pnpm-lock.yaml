@@ -24,9 +24,9 @@ importers:
 
   apps/playground:
     dependencies:
-      sakune:
+      '@tideform/render':
         specifier: workspace:*
-        version: link:../../packages/sakune
+        version: link:../../packages/render
     devDependencies:
       typescript:
         specifier: ~6.0.2
@@ -38,7 +38,7 @@ importers:
         specifier: 'catalog:'
         version: 0.1.20(@types/node@25.6.0)(@voidzero-dev/vite-plus-core@0.1.20(@types/node@25.6.0)(jiti@2.7.0)(typescript@6.0.3)(yaml@2.8.4))(jiti@2.7.0)(typescript@6.0.3)(yaml@2.8.4)
 
-  packages/sakune:
+  packages/render:
     devDependencies:
       '@types/node':
         specifier: ^25.5.0

@@ -1,7 +1,7 @@
 {
-  "name": "sakune",
+  "name": "@tideform/render",
   "version": "0.0.0",
-  "description": "A lightweight 2.5D tabletop rendering engine.",
+  "description": "Tideform — a lightweight 2.5D tabletop rendering engine.",
   "license": "MIT",
   "files": [
     "dist"
